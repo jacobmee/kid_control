@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # File to store the total minutes and current usage
-hours_file="./kidcontrol_hours.txt"
-log_file="./kidcontrol_log.txt"
-current_day_file="./current_day.txt"
+. /home/jacob/kid_control/prop.config
 
 # Initialize the hours file if it doesn't exist
-if [ ! -f "$hours_file" ]; then
-    echo -e "mon=120\ntue=120\nwed=120\nthu=120\nfri=120\nsat=300\nsun=30" > "$hours_file"
-    echo "current=0" >> "$hours_file"
+if [ ! -f "$config_file" ]; then
+    echo "period=30" > "$config_file"
+    echo "starting=8" >> "$config_file"
+    echo "ending=22" >> "$config_file"
+    echo -e "mon=120\ntue=120\nwed=120\nthu=120\nfri=120\nsat=300\nsun=300" >> "$config_file"
+    echo "current=0" >> "$config_file"
 fi
 
 # Initialize the current day file if it doesn't exist
@@ -20,7 +21,7 @@ fi
 set_minutes() {
     local day=$1
     local minutes=$2
-    sed -i "s/$day=[0-9]*/$day=$minutes/" "$hours_file"
+    sed -i "s/$day=[0-9]*/$day=$minutes/" "$config_file"
 }
 
 # Function to get the current usage in minutes
@@ -47,13 +48,13 @@ update_current_usage() {
     # Debugging: Print new usage and total usage
     #echo "total_usage: $total_usage"
     
-    sed -i "s/current=[0-9]*/current=$total_usage/" "$hours_file"
+    sed -i "s/current=[0-9]*/current=$total_usage/" "$config_file"
 }
 
 # Function to check if the maximum minutes have been reached
 check_max_minutes() {
     local day=$1
-    local max_minutes=$(grep "$day=" "$hours_file" | cut -d'=' -f2)
+    local max_minutes=$(grep "$day=" "$config_file" | cut -d'=' -f2)
     local current_usage=$(get_current_usage)
 
     if [ "$current_usage" -ge "$max_minutes" ]; then
@@ -69,7 +70,7 @@ reset_current_usage() {
 
     if [ "$current_day" != "$previous_day" ]; then
         echo "$previous_day: $current_usage mins" >> "$log_file"
-        sed -i "s/current=[0-9]*/current=0/" "$hours_file"
+        sed -i "s/current=[0-9]*/current=0/" "$config_file"
         date +%Y-%m-%d > "$current_day_file"
     fi
 }

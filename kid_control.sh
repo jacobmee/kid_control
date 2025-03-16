@@ -1,15 +1,13 @@
 #!/bin/bash
 
-# Variables
-router_ip="192.168.0.1"
-username="jacob"
-password="Jac0bm!@#G"
-rule_name="max"
+# Source the configuration file
+. /home/jacob/kid_control/prop.config
+
 action=$1  # "startcounting" or "stopcounting"
 
 # Validate action parameter
 if [ "$action" != "startcounting" ] && [ "$action" != "stopcounting" ] && [ "$action" != "check_status" ]; then
-    echo "Invalid action. Use 'startcounting', 'stopcounting', or 'check_status'."
+    echo "Invalid action. Use 'startcounting', 'stopcounting', or 'check_status'." > "$error_file"
     exit 1
 fi
 
@@ -18,9 +16,9 @@ check_kidcontrol_status() {
     rules=$(curl -s -u "$username:$password" "http://$router_ip/rest/ip/kid-control")
     rule_status=$(echo "$rules" | jq -r --arg rule_name "$rule_name" '.[] | select(.name == $rule_name) | .disabled')
     if [ "$rule_status" = "true" ]; then
-        echo "disabled" > ./kidcontrol_status.txt
+        echo "disabled" > "$status_file"
     else
-        echo "enabled" > ./kidcontrol_status.txt
+        echo "enabled" > "$status_file"
     fi
 }
 
@@ -30,16 +28,16 @@ if [ "$action" = "check_status" ]; then
     exit 0
 fi
 
-# Function to get the total minutes used today from kidcontrol_hours.txt
+# Function to get the total minutes used today from kidcontrol.config
 get_total_minutes_used() {
-    current_minutes=$(grep "^current=" /home/jacob/kid_control/kidcontrol_hours.txt | cut -d'=' -f2)
+    current_minutes=$(grep "^current=" "$config_file" | cut -d'=' -f2)
     echo "$current_minutes"
 }
 
-# Function to get the maximum minutes allowed for today from kidcontrol_hours.txt
+# Function to get the maximum minutes allowed for today from kidcontrol.config
 get_max_minutes_for_today() {
     current_day=$(date +%a | tr '[:upper:]' '[:lower:]')
-    max_minutes=$(grep "^$current_day=" /home/jacob/kid_control/kidcontrol_hours.txt | cut -d'=' -f2)
+    max_minutes=$(grep "^$current_day=" "$config_file" | cut -d'=' -f2)
     echo "$max_minutes"
 }
 
@@ -49,12 +47,23 @@ total_minutes_used=$(get_total_minutes_used)
 # Get the maximum minutes allowed for today
 max_minutes=$(get_max_minutes_for_today)
 
-# Check if the current time exceeds the maximum allowed time
-if [ "$action" = "startcounting" ] && [ "$total_minutes_used" -ge "$max_minutes" ]; then
-    echo "Cannot start counting. The total minutes used today ($total_minutes_used) exceeds the maximum allowed ($max_minutes)." | tee -a "$log_file"
-    exit 1
-fi
+# Get the start and end hours from the configuration file
+start_hour=$(grep "^starting=" "$config_file" | cut -d'=' -f2)
+end_hour=$(grep "^ending=" "$config_file" | cut -d'=' -f2)
 
+# Get the current hour
+current_hour=$(date +%H)
+
+# Check if the current time exceeds the maximum allowed time or is outside the allowed hours
+if [ "$action" = "startcounting" ]; then
+    if [ "$total_minutes_used" -ge "$max_minutes" ]; then
+        echo "Cannot start counting. The total minutes used today ($total_minutes_used) exceeds the maximum allowed ($max_minutes)." > "$error_file"
+        exit 1
+    elif [ "$current_hour" -lt "$start_hour" ] || [ "$current_hour" -ge "$end_hour" ]; then
+        echo "Cannot start counting. The current time ($current_hour:00) is outside the allowed hours ($start_hour:00 - $end_hour:00)." > "$error_file"
+        exit 1
+    fi
+fi
 
 # Determine the value for the "disabled" field
 if [ "$action" = "stopcounting" ]; then
@@ -91,10 +100,10 @@ if [ -n "$rule_id" ]; then
     
     if [ "$action" = "startcounting" ]; then
         # Save the start time to kidcontrol_start_time.txt
-        date +%s > ./kidcontrol_start_time.txt
+        date +%s > "$start_time_file"
     elif [ "$action" = "stopcounting" ]; then
         # Calculate the elapsed time
-        start_time=$(cat ./kidcontrol_start_time.txt)
+        start_time=$(cat "$start_time_file")
         current_time=$(date +%s)
         elapsed_time=$(( (current_time - start_time) / 60 ))  # Convert seconds to minutes
         
@@ -102,11 +111,11 @@ if [ -n "$rule_id" ]; then
         current_day=$(date +%a | tr '[:upper:]' '[:lower:]')
         
         # Update the current usage using manage_hours.sh
-        ./manage_hours.sh update "$current_day" "$elapsed_time"
+        "$manage_config_script" update "$current_day" "$elapsed_time"
         
         # Remove the start time file
-        rm ./kidcontrol_start_time.txt
+        rm "$start_time_file"
     fi
 else
-    echo "KidControl rule '$rule_name' not found."
+    echo "KidControl rule '$rule_name' not found." > "$error_file"
 fi

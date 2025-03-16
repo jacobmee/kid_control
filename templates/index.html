@@ -93,35 +93,52 @@
             color: #f44336; /* Red color */
         }
         .total-spent {
-            font-size: 0.8em; /* Smaller font size */
+            font-size: 1.2em; /* Increased font size */
             margin-top: 3px; /* Adjust margin to move closer to the list */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Kid Control Hours</h1>
-        <p>
-            {% if counting_status == 'disabled' %}
-                <span class="status-up">Network is UP</span>
-            {% else %}
-                <span class="status-down">Network is DOWN</span>
-            {% endif %}
-        </p>
-        <ul>
-            {% for day, minutes in hours.items() %}
-                <li>{{ day }}: {{ minutes }} mins</li>
-            {% endfor %}
-        </ul>
-        <p class="total-spent">Total spent today: {{ total_minutes_used }} + <span class="highlight">({{ elapsed_time }})</span> mins</p>
-        <div class="button-container">
-            <form action="{{ url_for('startcount') }}" method="post">
-                <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start Counting</button>
-            </form>
-            <form action="{{ url_for('stopcount') }}" method="post">
-                <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop Counting</button>
-            </form>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="container">
+            <ul class="flashes">
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
         </div>
-    </div>
+    {% else %}
+        <div class="container">
+            <h1>Kid Control Hours</h1>
+            <p>
+                {% if counting_status == 'disabled' %}
+                    <span class="status-up">Network is UP</span>
+                {% else %}
+                    <span class="status-down">Network is DOWN</span>
+                {% endif %}
+            </p>
+            <ul>
+                {% for day, minutes in hours.items() %}
+                    <li>{{ day }}: {{ minutes }} mins</li>
+                {% endfor %}
+            </ul>
+            <p class="total-spent">Time left today: <span class="highlight">{{ remaining_time }}</span>
+                {% if counting_status == 'disabled' %}
+                    <span class="highlight">- {{ elapsed_time }}</span>
+                {% endif %}
+                mins
+            </p>
+            <div class="button-container">
+                <form action="{{ url_for('startcount') }}" method="post">
+                    <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start Counting</button>
+                </form>
+                <form action="{{ url_for('stopcount') }}" method="post">
+                    <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop Counting</button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+    {% endwith %}
 </body>
 </html>
