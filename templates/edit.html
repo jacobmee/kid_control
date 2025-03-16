@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Kid Control Hours</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        form {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            align-items: center;
+        }
+        label {
+            margin: 5px 0;
+            font-weight: bold;
+            text-align: right;
+            padding-right: 10px;
+        }
+        input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 60px; /* Adjust the width to be smaller */
+            text-align: center; /* Center the text inside the input */
+        }
+        .button-container {
+            grid-column: span 2;
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 1em;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var password = prompt("Please enter the password:");
+            if (password !== "lilyismymom") {
+                alert("Incorrect password!");
+                window.location.href = "/"; // Redirect to another page
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Edit Maximum (mins)</h1>
+        <form action="{{ url_for('edit_hours') }}" method="post">
+            {% for day, minutes in hours.items() %}
+                <label for="{{ day }}">{{ day.capitalize() }}</label>
+                <input type="number" id="{{ day }}" name="{{ day }}" value="{{ minutes }}" required>
+            {% endfor %}
+            <div class="button-container">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

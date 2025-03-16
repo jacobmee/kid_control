@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kid Control Hours</title>
+    <meta http-equiv="refresh" content="60"> <!-- Auto-refresh every 60 seconds -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 60vh; /* Reduced height */
+            max-width: 400px; /* Adjust max-width as needed */
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1.5em;
+        }
+        p {
+            font-size: 1em;
+            color: #666;
+            margin: 5px 0;
+        }
+        .highlight {
+            color: #007BFF; /* Highlight color changed to blue */
+            font-weight: bold;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin: 5px 0;
+        }
+        li {
+            background-color: #e9e9e9;
+            margin: 3px auto;
+            padding: 5px 10px;
+            border-radius: 4px;
+            width: 70%; /* Adjust the width to make the background narrower */
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 5px; /* Add some space above the buttons */
+        }
+        form {
+            display: inline-block;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .start-button {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .stop-button {
+            background-color: #f44336;
+            color: white;
+        }
+        .status-up {
+            color: #4CAF50; /* Green color */
+        }
+        .status-down {
+            color: #f44336; /* Red color */
+        }
+        .total-spent {
+            font-size: 0.8em; /* Smaller font size */
+            margin-top: 3px; /* Adjust margin to move closer to the list */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kid Control Hours</h1>
+        <p>
+            {% if counting_status == 'disabled' %}
+                <span class="status-up">Network is UP</span>
+            {% else %}
+                <span class="status-down">Network is DOWN</span>
+            {% endif %}
+        </p>
+        <ul>
+            {% for day, minutes in hours.items() %}
+                <li>{{ day }}: {{ minutes }} mins</li>
+            {% endfor %}
+        </ul>
+        <p class="total-spent">Total spent today: {{ total_minutes_used }} + <span class="highlight">({{ elapsed_time }})</span> mins</p>
+        <div class="button-container">
+            <form action="{{ url_for('startcount') }}" method="post">
+                <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start Counting</button>
+            </form>
+            <form action="{{ url_for('stopcount') }}" method="post">
+                <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop Counting</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
