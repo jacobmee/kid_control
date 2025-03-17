@@ -13,7 +13,7 @@ config = {}
 with open(config_path) as f:
     for line in f:
         line = line.strip()
-        if line and not line.startswith('#'):
+        if line and not line.startswith('#') and '=' in line:
             name, value = line.split('=', 1)
             config[name] = value
 
