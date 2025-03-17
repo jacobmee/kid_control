@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# File to store the total minutes and current usage
 . /home/jacob/kid_control/prop.config
 
 # Initialize the hours file if it doesn't exist
@@ -26,7 +25,7 @@ set_minutes() {
 
 # Function to get the current usage in minutes
 get_current_usage() {
-    grep "current=" "$hours_file" | cut -d'=' -f2
+    grep "current=" "$config_file" | cut -d'=' -f2
 }
 
 # Function to update the current usage in minutes
