@@ -1,8 +1,0 @@
-mon=120
-tue=120
-wed=120
-thu=120
-fri=120
-sat=300
-sun=300
-current=219
