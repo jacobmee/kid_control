@@ -68,7 +68,7 @@ reset_current_usage() {
     local previous_day=$(cat "$current_day_file")
 
     if [ "$current_day" != "$previous_day" ]; then
-        echo "$previous_day: $current_usage mins" >> "$log_file"
+        echo "$current_day: $current_usage mins newly set" >> "$log_file"
         sed -i "s/current=[0-9]*/current=0/" "$config_file"
         date +%Y-%m-%d > "$current_day_file"
     fi

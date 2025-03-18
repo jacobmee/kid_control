@@ -70,21 +70,21 @@ if [ -f "$start_time_file" ]; then
     # Check if the total exceeds the maximum minutes, if elapsed time exceeds max_elapsed_time, or if it's after stop_hour or before start_hour
     current_hour=$(date +%H)
     if [ $((total_minutes_used + elapsed_time)) -ge $max_minutes ]; then
-        echo "$(date): [STOPPED for time's up]: Elapsed: $elapsed_time + Used: $total_minutes_used > Max : $max_minutes" >> "$log_file"
+        echo "$(date): [FORCE STOP for time's up]: Elapsed: $elapsed_time + Used: $total_minutes_used > Max : $max_minutes" >> "$log_file"
         "$kid_control_script" stopcounting
     elif [ $elapsed_time -gt "$max_elapsed_time" ]; then
-        echo "$(date): [STOPPED for resting]: Elapsed: $elapsed_time > Max Elapsed: $max_elapsed_time" >> "$log_file"
+        echo "$(date): [FORCE STOP for resting]: Elapsed: $elapsed_time > Max Elapsed: $max_elapsed_time" >> "$log_file"
         "$kid_control_script" stopcounting
     elif [ "$current_hour" -ge "$stop_hour" ]; then
-        echo "$(date): [STOPPED for too late]: Current Hour: $current_hour >= Stop Hour: $stop_hour" >> "$log_file"
+        echo "$(date): [FORCE STOP for too late]: Current Hour: $current_hour >= Stop Hour: $stop_hour" >> "$log_file"
         "$kid_control_script" stopcounting
     elif [ "$current_hour" -lt "$start_hour" ]; then
-        echo "$(date): [STOPPED for too early]: Current Hour: $current_hour < Start Hour: $start_hour" >> "$log_file"
+        echo "$(date): [FORCE STOP for too early]: Current Hour: $current_hour < Start Hour: $start_hour" >> "$log_file"
         "$kid_control_script" stopcounting
     else
-        left_minutes=$((max_minutes - total_minutes_used - elapsed_time))
+        left_minutes=$((max_minutes - total_minutes_used))
         if [ $((left_minutes % 10)) -eq 0 ]; then
-            echo "$(date): $left_minutes minutes left." >> "$log_file"
+            echo "$(date): COUNTING ($left_minutes - $elapsed_time) minutes." >> "$log_file"
         fi
     fi
 else   
