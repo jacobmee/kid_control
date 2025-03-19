@@ -83,7 +83,7 @@ if [ -f "$start_time_file" ]; then
         "$kid_control_script" stopcounting
     else
         left_minutes=$((max_minutes - total_minutes_used))
-        if [ $((left_minutes % 10)) -eq 0 ]; then
+        if [ $((elapsed_time % 10)) -eq 0 ] && [ "$elapsed_time" -ne 0 ]; then
             echo "$(date): COUNTING ($left_minutes - $elapsed_time) minutes." >> "$log_file"
         fi
     fi
