@@ -5,10 +5,23 @@
 
 action=$1  # "startcounting" or "stopcounting"
 
+
 # Validate action parameter
-if [ "$action" != "startcounting" ] && [ "$action" != "stopcounting" ] && [ "$action" != "check_status" ]; then
-    echo "Invalid action. Use 'startcounting', 'stopcounting', or 'check_status'." > "$error_file"
+if [ "$action" != "startcounting" ] && [ "$action" != "stopcounting" ] && [ "$action" != "check_status" ] && [ "$action" != "update" ]; then
+    echo "Invalid action. Use 'startcounting', 'stopcounting', 'check_status', or 'update'." > "$error_file"
     exit 1
+fi
+
+# Handle the update action
+if [ "$action" = "update" ]; then
+    if [ "$2" = "current" ] && [[ "$3" =~ ^-?[0-9]+$ ]]; then
+        "$manage_config_script" update "$3"
+        echo "$(date): Updated current usage by $3 minutes." >> "$log_file"
+    else
+        echo "Invalid parameters for update current:$1,$2,$3 " > "$error_file"
+        exit 1
+    fi
+    exit 0
 fi
 
 # Function to check if KidControl rule is disabled

@@ -3,6 +3,8 @@ import subprocess
 import os
 import calendar
 import time
+import json
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with your actual secret key
@@ -23,6 +25,7 @@ status_file = config['status_file']
 start_time_file = config['start_time_file']
 kid_control_script = config['kid_control_script']
 error_file = config['error_file']
+task_status_file = config['task_status_file']
 
 def read_kidcontrol_config():
     with open(config_file, 'r') as file:
@@ -50,6 +53,20 @@ def get_elapsed_time():
 
 @app.route('/')
 def index():
+    today = str(date.today())
+    # Load task status
+
+# Initialize task status file if it doesn't exist
+    if not os.path.exists(task_status_file):
+        with open(task_status_file, 'w') as f:
+            json.dump({}, f)
+            
+    with open(task_status_file, 'r') as f:
+        task_status = json.load(f)
+    
+    # Get today's task status
+    today_status = task_status.get(today, {})
+
     hours = read_kidcontrol_config()
     total_minutes_used = hours.pop('current', 0)  # Get 'current' from hours
 
@@ -74,7 +91,43 @@ def index():
         flash(error_message)
         os.remove(error_file)
         
-    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time)
+    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time,task_status=today_status)
+
+@app.route('/adjust_time', methods=['POST'])
+def adjust_time():
+    task = request.form.get('task')
+    today = str(date.today())
+
+    # Load task status
+    with open(task_status_file, 'r') as f:
+        task_status = json.load(f)
+
+    # Check if the task has already been completed today
+    if task_status.get(today, {}).get(task):
+        flash(f"You have already completed '{task}' today.")
+        return redirect(url_for('index'))
+
+    # Mark the task as completed for today
+    if today not in task_status:
+        task_status[today] = {}
+    task_status[today][task] = True
+
+    # Save the updated task status
+    with open(task_status_file, 'w') as f:
+        json.dump(task_status, f)
+
+    # Call the kid_control script to adjust time
+    if task == 'homework':
+        subprocess.run([kid_control_script, 'update', 'current', '-60'])
+        flash("60 minutes deducted for finishing homework.")
+    elif task == 'coding':
+        subprocess.run([kid_control_script, 'update', 'current', '-15'])
+        flash("15 minutes deducted for finishing codingwork.")
+    elif task == 'washes':
+        subprocess.run([kid_control_script, 'update', 'current', '-15'])
+        flash("15 minutes deducted for finishing washes.")
+    return redirect(url_for('index'))
+
 
 @app.route('/startcount', methods=['POST'])
 def startcount():

@@ -25,7 +25,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 60vh; /* Reduced height */
+            height: 80vh; /* Reduced height */
             max-width: 400px; /* Adjust max-width as needed */
         }
         h1 {
@@ -66,6 +66,10 @@
         }
         form {
             display: inline-block;
+        }
+        .add-button {
+        background-color: #007BFF; /* Blue color */
+        color: white;
         }
         button {
             padding: 8px 16px;
@@ -111,6 +115,7 @@
     {% else %}
         <div class="container">
             <h1>Kid Control Hours</h1>
+            <p></p>
             <p>
                 {% if counting_status == 'disabled' %}
                     <span class="status-up">Network is UP</span>
@@ -123,12 +128,27 @@
                     <li>{{ day }}: {{ minutes }} mins</li>
                 {% endfor %}
             </ul>
+            <div class="button-container">
+                <form action="{{ url_for('adjust_time') }}" method="post">
+                    <input type="hidden" name="task" value="homework">
+                    <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Finish homework</button>
+                </form>
+                <form action="{{ url_for('adjust_time') }}" method="post">
+                    <input type="hidden" name="task" value="coding">
+                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Finish codingwork</button>
+                </form>
+                <form action="{{ url_for('adjust_time') }}" method="post">
+                    <input type="hidden" name="task" value="washes">
+                    <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Finish washes</button>
+                </form>
+            </div>
+            <p></p> <p></p>
             <p class="total-spent">Time left today: <span class="highlight">{{ remaining_time }}</span>
                 {% if counting_status == 'disabled' %}
                     <span class="highlight">- {{ elapsed_time }}</span>
                 {% endif %}
                 mins
-            </p>
+            </p><p></p>
             <div class="button-container">
                 <form action="{{ url_for('startcount') }}" method="post">
                     <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start Counting</button>

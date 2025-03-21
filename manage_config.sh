@@ -7,7 +7,7 @@ if [ ! -f "$config_file" ]; then
     echo "period=30" > "$config_file"
     echo "starting=8" >> "$config_file"
     echo "ending=22" >> "$config_file"
-    echo -e "mon=120\ntue=120\nwed=120\nthu=120\nfri=120\nsat=300\nsun=300" >> "$config_file"
+    echo -e "mon=60\ntue=60\nwed=60\nthu=60\nfri=60\nsat=120\nsun=120" >> "$config_file"
     echo "current=0" >> "$config_file"
 fi
 
@@ -37,7 +37,14 @@ update_current_usage() {
     # echo "current_usage: $current_usage"
     
     # Check if current_usage is a valid number
-    if ! [[ "$current_usage" =~ ^[0-9]+$ ]]; then
+    # Validate that new_usage is a number (allow negative values)
+    if ! [[ "$new_usage" =~ ^-?[0-9]+$ ]]; then
+        echo "Error: Invalid input for new usage: $new_usage. Must be a number."
+        exit 1
+    fi
+
+    # Validate that current_usage is a valid number (allow negative values)
+    if ! [[ "$current_usage" =~ ^-?[0-9]+$ ]]; then
         echo "Error: Invalid current usage value: $current_usage"
         exit 1
     fi
@@ -45,9 +52,12 @@ update_current_usage() {
     local total_usage=$((current_usage + new_usage))
     
     # Debugging: Print new usage and total usage
-    #echo "total_usage: $total_usage"
+    echo "current_usage: $current_usage"
+    echo "new_usage: $new_usage"
+    echo "minutes: $minutes"
+    echo "total_usage: $total_usage"
     
-    sed -i "s/current=[0-9]*/current=$total_usage/" "$config_file"
+    sed -i "s/current=[-0-9]*/current=$total_usage/" "$config_file"
 }
 
 # Function to check if the maximum minutes have been reached
@@ -69,26 +79,22 @@ reset_current_usage() {
 
     if [ "$current_day" != "$previous_day" ]; then
         echo "$current_day: $current_usage mins newly set" >> "$log_file"
-        sed -i "s/current=[0-9]*/current=0/" "$config_file"
+        sed -i "s/current=[-0-9]*/current=0/" "$config_file"
         date +%Y-%m-%d > "$current_day_file"
     fi
 }
 
 # Command-line arguments
-command=$1
-day=$2
-minutes=$3
-
-case $command in
+case $1 in
     set)
-        set_minutes "$day" "$minutes"
+        set_minutes "$2" "$3"
         ;;
     check)
-        check_max_minutes "$day"
+        check_max_minutes "$2"
         ;;
     update)
         reset_current_usage
-        update_current_usage "$minutes"
+        update_current_usage "$2"
         ;;
     get_current_usage)
         get_current_usage
