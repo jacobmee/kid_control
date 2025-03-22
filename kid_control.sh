@@ -123,11 +123,8 @@ if [ -n "$rule_id" ]; then
         current_time=$(date +%s)
         elapsed_time=$(( (current_time - start_time) / 60 ))  # Convert seconds to minutes
         
-        # Get the current day
-        current_day=$(date +%a | tr '[:upper:]' '[:lower:]')
-        
         # Update the current usage using manage_hours.sh
-        "$manage_config_script" update "$current_day" "$elapsed_time"
+        "$manage_config_script" update "$elapsed_time"
         
         # Remove the start time file
         rm "$start_time_file"

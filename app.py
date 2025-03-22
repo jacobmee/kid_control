@@ -56,6 +56,9 @@ def index():
     today = str(date.today())
     # Load task status
 
+    current_day = date.today().strftime('%A').lower()  # Get the current day (e.g., "saturday", "sunday")
+
+
 # Initialize task status file if it doesn't exist
     if not os.path.exists(task_status_file):
         with open(task_status_file, 'w') as f:
@@ -91,7 +94,7 @@ def index():
         flash(error_message)
         os.remove(error_file)
         
-    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time,task_status=today_status)
+    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time,task_status=today_status,current_day=current_day)
 
 @app.route('/adjust_time', methods=['POST'])
 def adjust_time():
@@ -118,14 +121,20 @@ def adjust_time():
 
     # Call the kid_control script to adjust time
     if task == 'homework':
-        subprocess.run([kid_control_script, 'update', 'current', '-60'])
-        flash("60 minutes deducted for finishing homework.")
-    elif task == 'coding':
+        subprocess.run([kid_control_script, 'update', 'current', '-30'])
+        flash("30 minutes deducted for finishing homework.")
+    elif task == 'english':
         subprocess.run([kid_control_script, 'update', 'current', '-15'])
         flash("15 minutes deducted for finishing codingwork.")
+    elif task == 'coding':
+        subprocess.run([kid_control_script, 'update', 'current', '-30'])
+        flash("30 minutes deducted for finishing coding.")
     elif task == 'washes':
         subprocess.run([kid_control_script, 'update', 'current', '-15'])
         flash("15 minutes deducted for finishing washes.")
+    elif task == 'outdoor':
+        subprocess.run([kid_control_script, 'update', 'current', '-60'])
+        flash("60 minutes deducted for finishing outdoor.")
     return redirect(url_for('index'))
 
 

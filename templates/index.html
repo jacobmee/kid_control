@@ -26,7 +26,7 @@
             flex-direction: column;
             justify-content: space-between;
             height: 80vh; /* Reduced height */
-            max-width: 400px; /* Adjust max-width as needed */
+            max-width: 500px; /* Adjust max-width as needed */
         }
         h1 {
             color: #333;
@@ -131,15 +131,28 @@
             <div class="button-container">
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="homework">
-                    <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Finish homework</button>
+                    <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Finish homework (30)</button>
+                </form>
+                <form action="{{ url_for('adjust_time') }}" method="post">
+                    <input type="hidden" name="task" value="englishwork">
+                    <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>Finish English (15)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="coding">
-                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Finish codingwork</button>
+                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Finish coding (30)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="washes">
-                    <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Finish washes</button>
+                    <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Finish washes (15)</button>
+                </form>
+                <form action="{{ url_for('adjust_time') }}" method="post">
+                    <input type="hidden" name="task" value="outdoor">
+                    <button type="submit" class="add-button" 
+                        {% if task_status.get('outdoor') or current_day not in ['saturday', 'sunday'] %}
+                            style="display: none;"  <!-- Hides the button -->
+                        {% endif %}>
+                        Finish outdoor (60)
+                    </button>
                 </form>
             </div>
             <p></p> <p></p>

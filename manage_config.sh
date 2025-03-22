@@ -52,10 +52,7 @@ update_current_usage() {
     local total_usage=$((current_usage + new_usage))
     
     # Debugging: Print new usage and total usage
-    echo "current_usage: $current_usage"
-    echo "new_usage: $new_usage"
-    echo "minutes: $minutes"
-    echo "total_usage: $total_usage"
+    echo "Updated current_usage: $current_usage + new_usage: $new_usage = $total_usage"
     
     sed -i "s/current=[-0-9]*/current=$total_usage/" "$config_file"
 }
