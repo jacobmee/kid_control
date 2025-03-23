@@ -122,19 +122,22 @@ def adjust_time():
     # Call the kid_control script to adjust time
     if task == 'homework':
         subprocess.run([kid_control_script, 'update', 'current', '-30'])
-        flash("30 minutes deducted for finishing homework.")
+        flash("30 minutes charged for finishing homework.")
     elif task == 'english':
         subprocess.run([kid_control_script, 'update', 'current', '-15'])
-        flash("15 minutes deducted for finishing codingwork.")
+        flash("15 minutes charged for finishing english homework.")
     elif task == 'coding':
-        subprocess.run([kid_control_script, 'update', 'current', '-30'])
-        flash("30 minutes deducted for finishing coding.")
+        subprocess.run([kid_control_script, 'update', 'current', '-15'])
+        flash("15 minutes charged for finishing coding.")
+    elif task == 'noyelling':
+        subprocess.run([kid_control_script, 'update', 'current', '-15'])
+        flash("15 minutes charged for being a gentleman.")
     elif task == 'washes':
         subprocess.run([kid_control_script, 'update', 'current', '-15'])
-        flash("15 minutes deducted for finishing washes.")
+        flash("15 minutes charged for finishing washes.")
     elif task == 'outdoor':
         subprocess.run([kid_control_script, 'update', 'current', '-60'])
-        flash("60 minutes deducted for finishing outdoor.")
+        flash("60 minutes charged for finishing outdoor.")
     return redirect(url_for('index'))
 
 

@@ -25,8 +25,8 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 80vh; /* Reduced height */
-            max-width: 500px; /* Adjust max-width as needed */
+            height: 85vh; /* Reduced height */
+            max-width: 600px; /* Adjust max-width as needed */
         }
         h1 {
             color: #333;
@@ -64,6 +64,8 @@
             justify-content: center;
             gap: 5px;
             margin-top: 5px; /* Add some space above the buttons */
+            margin-left: 20px; /* Adjust margin to move closer to the list */
+            margin-right: 20px; /* Adjust margin to move closer to the list */
         }
         form {
             display: inline-block;
@@ -78,6 +80,8 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
+            width: 130px;
+            height: 50px;
         }
         button:disabled {
             background-color: #f2f4f4;
@@ -144,7 +148,13 @@
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="coding">
-                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Finish coding (30)</button>
+                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Finish coding (15)</button>
+                </form>
+            </div>
+            <div class="button-container">
+                <form action="{{ url_for('adjust_time') }}" method="post">
+                    <input type="hidden" name="task" value="noyelling">
+                    <button type="submit" class="add-button" {% if task_status.get('noyelling') %}disabled{% endif %}>Be a gentleman (15)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="washes">
@@ -176,6 +186,7 @@
                     <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop Counting</button>
                 </form>
             </div>
+            <p></p>
         </div>
     {% endif %}
     {% endwith %}
