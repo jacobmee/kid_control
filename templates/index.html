@@ -140,25 +140,25 @@
             <div class="button-container">
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="homework">
-                    <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Finish homework (30)</button>
+                    <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Homework (30)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
-                    <input type="hidden" name="task" value="englishwork">
-                    <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>Finish English (15)</button>
+                    <input type="hidden" name="task" value="english">
+                    <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>English work (15)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="coding">
-                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Finish coding (15)</button>
+                    <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Coding (15)</button>
                 </form>
             </div>
             <div class="button-container">
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="noyelling">
-                    <button type="submit" class="add-button" {% if task_status.get('noyelling') %}disabled{% endif %}>Be a gentleman (15)</button>
+                    <button type="submit" class="add-button" {% if task_status.get('noyelling') %}disabled{% endif %}>Be gentle (15)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="washes">
-                    <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Finish washes (15)</button>
+                    <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Clean yourself (15)</button>
                 </form>
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="outdoor">
@@ -167,7 +167,7 @@
                             style="display: none;"  <!-- Hides the button -->
                         {% endif %}
                         {% if task_status.get('outdoor') %}disabled{% endif %}>
-                        Finish outdoor (60)
+                        Outdoor (60)
                     </button>
                 </form>
             </div>
@@ -180,10 +180,10 @@
             </p><p></p>
             <div class="button-container">
                 <form action="{{ url_for('startcount') }}" method="post">
-                    <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start Counting</button>
+                    <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start counting</button>
                 </form>
                 <form action="{{ url_for('stopcount') }}" method="post">
-                    <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop Counting</button>
+                    <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop counting</button>
                 </form>
             </div>
             <p></p>

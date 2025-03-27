@@ -39,20 +39,20 @@ update_current_usage() {
     # Check if current_usage is a valid number
     # Validate that new_usage is a number (allow negative values)
     if ! [[ "$new_usage" =~ ^-?[0-9]+$ ]]; then
-        echo "Error: Invalid input for new usage: $new_usage. Must be a number."
+        logger "Kid_control: Error - Invalid input for new usage: $new_usage. Must be a number."
         exit 1
     fi
 
     # Validate that current_usage is a valid number (allow negative values)
     if ! [[ "$current_usage" =~ ^-?[0-9]+$ ]]; then
-        echo "Error: Invalid current usage value: $current_usage"
+        logger "Kid_control: Error - Invalid current usage value: $current_usage"
         exit 1
     fi
     
     local total_usage=$((current_usage + new_usage))
     
     # Debugging: Print new usage and total usage
-    echo "Updated current_usage: $current_usage + new_usage: $new_usage = $total_usage"
+    #logger "Kid_control: Updated current_usage: $current_usage + new_usage: $new_usage = $total_usage"
     
     sed -i "s/current=[-0-9]*/current=$total_usage/" "$config_file"
 }
@@ -75,7 +75,7 @@ reset_current_usage() {
     local previous_day=$(cat "$current_day_file")
 
     if [ "$current_day" != "$previous_day" ]; then
-        echo "$current_day: $current_usage mins newly set" >> "$log_file"
+        logger "Kid_control: $current_day: $current_usage mins newly set"
         sed -i "s/current=[-0-9]*/current=0/" "$config_file"
         date +%Y-%m-%d > "$current_day_file"
     fi

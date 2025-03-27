@@ -16,7 +16,7 @@ fi
 if [ "$action" = "update" ]; then
     if [ "$2" = "current" ] && [[ "$3" =~ ^-?[0-9]+$ ]]; then
         "$manage_config_script" update "$3"
-        echo "$(date): Updated current usage by $3 minutes." >> "$log_file"
+        logger "Kid_control: Updated current usage by $3 minutes."
     else
         echo "Invalid parameters for update current:$1,$2,$3 " > "$error_file"
         exit 1
@@ -116,7 +116,7 @@ if [ -n "$rule_id" ]; then
         # Save the start time to kidcontrol_start_time.txt
         date +%s > "$start_time_file"
         left_minutes=$((max_minutes - total_minutes_used))
-        echo "$(date): START counting - $left_minutes mins remaining +++" >> "$log_file"
+        logger "Kid_control: START counting - $left_minutes mins remaining +++"
     elif [ "$action" = "stopcounting" ]; then
         # Calculate the elapsed time
         start_time=$(cat "$start_time_file")
@@ -128,8 +128,8 @@ if [ -n "$rule_id" ]; then
         
         # Remove the start time file
         rm "$start_time_file"
-        echo "$(date): STOP counting - $elapsed_time mins closed ---" >> "$log_file"
+        logger "Kid_control: STOP counting - $elapsed_time mins closed ---"
     fi
 else
-    echo "KidControl rule '$rule_name' not found." > "$error_file"
+    logger "Kid_control: Rule '$rule_name' not found." > "$error_file"
 fi
