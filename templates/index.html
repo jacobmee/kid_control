@@ -118,6 +118,19 @@
             font-size: 1.2em; /* Increased font size */
             margin-top: 3px; /* Adjust margin to move closer to the list */
         }
+        @media (max-width: 768px) {
+            .container {
+                height: 70vh; /* Reduced height */
+                padding: 20px; /* Add more padding for better spacing */
+                max-width: 90%; /* Reduce the width for smaller screens */
+            }
+            button {
+                width: 100%; /* Make buttons take full width */
+                height: auto; /* Adjust height dynamically */
+                padding: 10px; /* Add padding for better touch targets */
+                font-size: 1em; /* Adjust font size for readability */
+            }
+        }
     </style>
 </head>
 <body>
