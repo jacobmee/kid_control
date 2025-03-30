@@ -12,12 +12,12 @@
         body {
             font-family: Gidole, sans-serif;
             background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
+            margin: 10;
+            padding: 10;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            height: auto;
         }
         .container {
             background-color: #fff;
@@ -28,15 +28,15 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 90vh; /* Reduced height */
-            max-width: 600px; /* Adjust max-width as needed */
+            height: auto; /* Reduced height */
+            max-width: 90%;
         }
         h1 {
             color: #333;
             margin-bottom: 5px;
             font-size: 1.5em;
         }
-        p {
+      p {
             font-size: 1em;
             color: #666;
             margin: 5px 0;
@@ -119,11 +119,6 @@
             margin-top: 3px; /* Adjust margin to move closer to the list */
         }
         @media (max-width: 768px) {
-            .container {
-                height: 70vh; /* Reduced height */
-                padding: 20px; /* Add more padding for better spacing */
-                max-width: 90%; /* Reduce the width for smaller screens */
-            }
             button {
                 width: 100%; /* Make buttons take full width */
                 height: auto; /* Adjust height dynamically */
