@@ -1,5 +1,7 @@
 *.txt
-**/logs/
 *.log
 *.json
-```
+*.file
+*.data
+.vscode/
+.DS_Store
