@@ -22,7 +22,7 @@ with open(config_path) as f:
 # Define paths using the sourced configuration
 config_file = config['config_file']
 status_file = config['status_file']
-start_time_file = config['start_time_file']
+time_record_file = config['time_record_file']
 kid_control_script = config['kid_control_script']
 error_file = config['error_file']
 task_status_file = config['task_status_file']
@@ -43,12 +43,18 @@ def check_kidcontrol_status():
     return status
 
 def get_elapsed_time():
-    if os.path.exists(start_time_file):
-        with open(start_time_file, 'r') as file:
-            start_time = int(file.read().strip())
-        current_time = int(time.time())
-        elapsed_time = (current_time - start_time) // 60  # Convert seconds to minutes
-        return elapsed_time
+    if os.path.exists(time_record_file):
+        with open(time_record_file, 'r') as file:
+            config_data = file.readlines()
+        config = {line.split('=')[0]: int(line.split('=')[1]) for line in config_data if '=' in line}
+        
+        # Check if start_time exists in the config
+        if 'start_time' in config:
+            start_time = config['start_time']
+            current_time = int(time.time())
+            elapsed_time = (current_time - start_time) // 60  # Convert seconds to minutes
+            return elapsed_time
+
     return 0
 
 @app.route('/')

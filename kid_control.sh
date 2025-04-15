@@ -5,6 +5,30 @@
 
 action=$1  # "startcounting" or "stopcounting"
 
+# Function to set a value in the time record file
+set_time_record() {
+    local key=$1
+    local value=$2
+    sed -i "/^$key=/d" "$time_record_file"  # Remove existing key if it exists
+    echo "$key=$value" >> "$time_record_file"
+}
+
+# Function to get a value from the time record file
+get_time_record() {
+    local key=$1
+    grep "^$key=" "$time_record_file" | cut -d'=' -f2
+}
+
+# Function to remove a value from the time record file
+remove_time_record() {
+    local key=$1
+    sed -i "/^$key=/d" "$time_record_file"
+}
+
+# Ensure the time record file exists
+if [ ! -f "$time_record_file" ]; then
+    touch "$time_record_file"
+fi
 
 # Validate action parameter
 if [ "$action" != "startcounting" ] && [ "$action" != "stopcounting" ] && [ "$action" != "check_status" ] && [ "$action" != "update" ]; then
@@ -62,9 +86,10 @@ total_minutes_used=$(get_total_minutes_used)
 max_minutes=$(get_max_minutes_for_today)
 
 # Get the start and end hours from the configuration file
-start_hour=$(grep "^starting=" "$config_file" | cut -d'=' -f2)
-end_hour=$(grep "^ending=" "$config_file" | cut -d'=' -f2)
-restime=$(grep "^restime=" "$config_file" | cut -d'=' -f2)
+defined_start_hour=$(grep "^starting=" "$config_file" | cut -d'=' -f2)
+defined_end_hour=$(grep "^ending=" "$config_file" | cut -d'=' -f2)
+defined_restime=$(grep "^restime=" "$config_file" | cut -d'=' -f2)
+defined_period=$(grep "^period=" "$config_file" | cut -d'=' -f2)
 
 # Get the current hour
 current_hour=$(date +%H)
@@ -74,24 +99,27 @@ if [ "$action" = "startcounting" ]; then
     if [ "$total_minutes_used" -ge "$max_minutes" ]; then
         echo "Cannot start counting. The total minutes used today ($total_minutes_used) exceeds the maximum allowed ($max_minutes)." > "$error_file"
         exit 1
-    elif [ "$current_hour" -lt "$start_hour" ] || [ "$current_hour" -ge "$end_hour" ]; then
-        echo "Cannot start counting. The current time ($current_hour:00) is outside the allowed hours ($start_hour:00 - $end_hour:00)." > "$error_file"
+    elif [ "$current_hour" -lt "$defined_start_hour" ] || [ "$current_hour" -ge "$defined_end_hour" ]; then
+        echo "Cannot start counting. The current time ($current_hour:00) is outside the allowed hours ($defined_start_hour:00 - $defined_end_hour:00)." > "$error_file"
         exit 1
     fi
 fi
 
 # if the stopped time file exists, check when it is stopped.
 # if stopped time is only less than restime, then we'll shrow a warning
-if [ -f "$stop_time_file" ]; then
-    stop_time=$(cat "$stop_time_file")
+stop_time=$(get_time_record "stop_time")
+# if stop time is not empty, then we can check the elapsed time
+if [ -n "$stop_time" ]; then
+    # Calculate the elapsed time since the last stop
     current_time=$(date +%s)
-    elapsed_time=$(( (current_time - stop_time) / 60 ))  # Convert seconds to minutes
-    
-    if [ "$elapsed_time" -lt "$restime" ]; then
-        echo "儿，要休息一会儿啊！" > "$error_file"
-        
+    rest_time=$(( (current_time - stop_time) / 60 ))  # Convert seconds to minutes
+    last_elapsed_time=$(get_time_record "elapsed_time")
+    if [ "$rest_time" -lt "$defined_restime"  && ["$last_elapsed_time" -gt "$defined_period"]; then
+        # if the last elasped time is more than period
+        echo "儿，要休息一会儿啊！$last_elapsed_time, $rest_time" > "$error_file"
     fi
 fi
+
 
 # Determine the value for the "disabled" field
 if [ "$action" = "stopcounting" ]; then
@@ -127,34 +155,41 @@ if [ -n "$rule_id" ]; then
     #echo "KidControl rule '$rule_name' has been $action."
     
     if [ "$action" = "startcounting" ]; then
-        # Save the start time to kidcontrol_start_time.txt
+        # Save the start time
+        current_time=$(date +%s)
+        set_time_record "start_time" "$current_time"
 
-        date +%s > "$start_time_file"
-        rm "$stop_time_file"
+        # Remove the stop time
+        remove_time_record "stop_time"
 
         left_minutes=$((max_minutes - total_minutes_used))
         logger "Kid_control: START counting - $left_minutes mins remaining +++"
     elif [ "$action" = "stopcounting" ]; then
-        # Calculate the elapsed time
-        start_time=$(cat "$start_time_file")
+
+        # Retrieve the start time
+        start_time=$(get_time_record "start_time")
         current_time=$(date +%s)
-        
-        # if current time is larger than start time, then we can calculate the elapsed time
+
+        # Calculate the elapsed time
         if [ "$current_time" -lt "$start_time" ]; then
             elapsed_time=0
         else
             elapsed_time=$(( (current_time - start_time) / 60 ))  # Convert seconds to minutes
         fi
-        # Save the stop time to kidcontrol_stop_time.txt
-        echo "$current_time" > "$stop_time_file"
-        
-        # Update the current usage using manage_hours.sh
+
+        # Save the stop time
+        set_time_record "stop_time" "$current_time"
+
+        # Save the elapsed time
+        set_time_record "elapsed_time" "$elapsed_time"
+
+        # Update the current usage
         "$manage_config_script" update "$elapsed_time"
-        
-        # Remove the start time file
-        rm "$start_time_file"
+
+        # Remove the start time
+        remove_time_record "start_time"
         logger "Kid_control: STOP counting - $elapsed_time mins closed ---"
-    fi
+
     fi
 else
     logger "Kid_control: Rule '$rule_name' not found." > "$error_file"
