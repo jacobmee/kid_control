@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Source the configuration file
-. /home/jacob/kid_control/prop.config
+. /home/jacob/apps/kid_control/prop.config
 
 # Function to get the total minutes used today from kidcontrol.config
 get_total_minutes_used() {

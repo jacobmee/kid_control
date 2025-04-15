@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with your actual secret key
 
 # Source the configuration file
-config_path = '/home/jacob/kid_control/prop.config'
+config_path = '/home/jacob/apps/kid_control/prop.config'
 config = {}
 with open(config_path) as f:
     for line in f:

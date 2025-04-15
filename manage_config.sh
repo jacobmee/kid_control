@@ -1,10 +1,11 @@
 #!/bin/bash
 
-. /home/jacob/kid_control/prop.config
+. /home/jacob/apps/kid_control/prop.config
 
 # Initialize the hours file if it doesn't exist
 if [ ! -f "$config_file" ]; then
     echo "period=30" > "$config_file"
+    echo "restime=10" > "$config_file"
     echo "starting=8" >> "$config_file"
     echo "ending=22" >> "$config_file"
     echo -e "mon=60\ntue=60\nwed=60\nthu=60\nfri=60\nsat=120\nsun=120" >> "$config_file"
