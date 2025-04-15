@@ -39,8 +39,10 @@ get_config() {
 }
 
 # Get the start time
-if [ -f "$start_time_file" ]; then
-    start_time=$(cat "$start_time_file")
+start_time=$(grep "^start_time=" "$time_record_file" | cut -d'=' -f2)
+#logger "Time_checking: Start time: $start_time"
+
+if [ -n "$start_time" ]; then
     current_time=$(date +%s)
     elapsed_time=$(( (current_time - start_time) / 60 ))  # Convert seconds to minutes
 
@@ -58,7 +60,7 @@ if [ -f "$start_time_file" ]; then
     if [ $((total_minutes_used + elapsed_time)) -ge $max_minutes ]; then
         logger "Time_checking: [FORCE STOP for time's up]: Elapsed: $elapsed_time + Used: $total_minutes_used > Max : $max_minutes" 
         "$kid_control_script" stopcounting
-    elif [ $elapsed_time -gt "$max_elapsed_time" ]; then
+    elif [ "$elapsed_time" -gt "$max_elapsed_time" ]; then
         logger "Time_checking: [FORCE STOP for resting]: Elapsed: $elapsed_time > Max Elapsed: $max_elapsed_time"
         "$kid_control_script" stopcounting
     elif [ "$current_hour" -ge "$stop_hour" ]; then

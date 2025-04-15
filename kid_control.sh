@@ -114,9 +114,9 @@ if [ -n "$stop_time" ]; then
     current_time=$(date +%s)
     rest_time=$(( (current_time - stop_time) / 60 ))  # Convert seconds to minutes
     last_elapsed_time=$(get_time_record "elapsed_time")
-    if [ "$rest_time" -lt "$defined_restime"  && ["$last_elapsed_time" -gt "$defined_period"]; then
+    if [ "$rest_time" -lt "$defined_restime" ] && [ "$last_elapsed_time" -ge "$defined_period" ]; then
         # if the last elasped time is more than period
-        echo "儿，要休息一会儿啊！$last_elapsed_time, $rest_time" > "$error_file"
+        echo "儿，休息一下眼睛哦！上次看了$last_elapsed_time 分钟, 刚休息$rest_time 分钟又要战斗？" > "$error_file"
     fi
 fi
 

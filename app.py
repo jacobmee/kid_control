@@ -59,11 +59,12 @@ def get_elapsed_time():
 
 @app.route('/')
 def index():
+    
     today = str(date.today())
     # Load task status
 
     current_day = date.today().strftime('%A').lower()  # Get the current day (e.g., "saturday", "sunday")
-
+    counting_status = check_kidcontrol_status()
 
 # Initialize task status file if it doesn't exist
     if not os.path.exists(task_status_file):
@@ -80,12 +81,13 @@ def index():
     total_minutes_used = hours.pop('current', 0)  # Get 'current' from hours
 
     hours.pop('period', 0)  # Remove 'period' from hours and get its value
+    hours.pop('restime', 0)  # Remove 'ending' from hours and get its value
     hours.pop('starting', 0)  # Remove 'starting' from hours and get its value
     hours.pop('ending', 0)  # Remove 'ending' from hours and get its value
 
     # Get the maximum minutes allowed for today from the hours dictionary
     max_minutes = hours.get(time.strftime('%a').lower(), 0)  # Use the current day to get the max minutes
-    counting_status = check_kidcontrol_status()
+    
     elapsed_time = get_elapsed_time() if counting_status == 'disabled' else 0
     # Calculate remaining time
     remaining_time = max_minutes - total_minutes_used
