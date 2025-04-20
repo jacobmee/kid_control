@@ -108,15 +108,32 @@ fi
 # if the stopped time file exists, check when it is stopped.
 # if stopped time is only less than restime, then we'll shrow a warning
 stop_time=$(get_time_record "stop_time")
+total_rest_time=0
 # if stop time is not empty, then we can check the elapsed time
 if [ -n "$stop_time" ]; then
     # Calculate the elapsed time since the last stop
     current_time=$(date +%s)
     rest_time=$(( (current_time - stop_time) / 60 ))  # Convert seconds to minutes
+    last_rest_time=$(get_time_record "rest_time")
+    if [ -n "$last_rest_time" ]; then
+        total_rest_time=$((rest_time + last_rest_time))
+    else
+        total_rest_time=$rest_time
+    fi
+
+    # check if the elapsed time is more than the defined period
     last_elapsed_time=$(get_time_record "elapsed_time")
-    if [ "$rest_time" -lt "$defined_restime" ] && [ "$last_elapsed_time" -ge "$defined_period" ]; then
-        # if the last elasped time is more than period
-        echo "儿，休息一下眼睛哦！上次看了$last_elapsed_time 分钟, 刚休息$rest_time 分钟又要战斗？" > "$error_file"
+    # calculate the stop times if how many times the defined period is in the last elapsed time
+    stop_times=$((last_elapsed_time / defined_period))  # Integer division
+    needed_rest_time=$((defined_period * defined_restime * stop_times / 100))
+
+    if [ "$total_rest_time" -lt "$needed_rest_time" ]; then
+        # if the last elasped time is less than period
+        echo "儿，休息一下眼睛哦！ 已经看了$last_elapsed_time 分钟, 只休息$total_rest_time 分钟又要战斗？" > "$error_file"
+        logger "Kid_control: Warning - Can't start as not enough restime: ($total_rest_time minutes) is less than the required rest time ($needed_rest_time minutes) as $stop_times stops for total $last_elapsed_time spent."
+        exit 1
+    else
+        logger "Kid_control: total Rest: ($total_rest_time) > Required ($needed_rest_time) as $stop_times stops for total $last_elapsed_time."
     fi
 fi
 
@@ -159,6 +176,12 @@ if [ -n "$rule_id" ]; then
         current_time=$(date +%s)
         set_time_record "start_time" "$current_time"
 
+        # reset the needed time to just fine 
+        #logger "Kid_control: New Rest: ($total_rest_time),Required: ($needed_rest_time) ."
+        if [ -n "$total_rest_time" ]; then
+            set_time_record "rest_time" "$total_rest_time"
+        fi
+        
         # Remove the stop time
         remove_time_record "stop_time"
 
@@ -181,7 +204,11 @@ if [ -n "$rule_id" ]; then
         set_time_record "stop_time" "$current_time"
 
         # Save the elapsed time
-        set_time_record "elapsed_time" "$elapsed_time"
+        last_elapsed_time=$(get_time_record "elapsed_time")
+        if [ -n "$last_elapsed_time" ]; then
+            last_elapsed_time=$((elapsed_time + last_elapsed_time))
+        fi
+        set_time_record "elapsed_time" "$last_elapsed_time"
 
         # Update the current usage
         "$manage_config_script" update "$elapsed_time"

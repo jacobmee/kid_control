@@ -27,6 +27,12 @@ check_network_stability() {
 # Check network stability
 check_network_stability
 
+# Function to get a value from the time record file
+get_time_record() {
+    local key=$1
+    grep "^$key=" "$time_record_file" | cut -d'=' -f2
+}
+
 # Function to get a parameter value from kidcontrol.config
 get_config() {
     param_name=$1
@@ -51,17 +57,30 @@ if [ -n "$start_time" ]; then
     # Get the maximum minutes allowed for today
     max_minutes=$(get_max_minutes_for_today)
     # Get parameters from kidcontrol.config
-    max_elapsed_time=$(get_config "period")
+    defined_period=$(get_config "period")
+    defined_restime=$(get_config "restime")
     stop_hour=$(get_config "ending")
     start_hour=$(get_config "starting")
+
+    # check if the elapsed time is more than the defined period
+    last_elapsed_time=$(get_time_record "elapsed_time")
+        if [ -n "$last_elapsed_time" ]; then
+            last_elapsed_time=$((elapsed_time + last_elapsed_time))
+        fi
+
+    # calculate the stop times if how many times the defined period is in the last elapsed time
+    stop_times=$((last_elapsed_time / defined_period))  # Integer division
+    needed_rest_time=$((defined_period * defined_restime * stop_times / 100))
+
+    last_rest_time=$(get_time_record "rest_time")
     
     # Check if the total exceeds the maximum minutes, if elapsed time exceeds max_elapsed_time, or if it's after stop_hour or before start_hour
     current_hour=$(date +%H)
     if [ $((total_minutes_used + elapsed_time)) -ge $max_minutes ]; then
         logger "Time_checking: [FORCE STOP for time's up]: Elapsed: $elapsed_time + Used: $total_minutes_used > Max : $max_minutes" 
         "$kid_control_script" stopcounting
-    elif [ "$elapsed_time" -gt "$max_elapsed_time" ]; then
-        logger "Time_checking: [FORCE STOP for resting]: Elapsed: $elapsed_time > Max Elapsed: $max_elapsed_time"
+    elif [ "$needed_rest_time" -gt "$last_rest_time" ]; then
+        logger "Time_checking: [FORCE STOP for resting]: Elapsed: $last_elapsed_time > Max Elapsed: $needed_rest_time"
         "$kid_control_script" stopcounting
     elif [ "$current_hour" -ge "$stop_hour" ]; then
         logger "Time_checking: [FORCE STOP for too late]: Current Hour: $current_hour >= Stop Hour: $stop_hour"

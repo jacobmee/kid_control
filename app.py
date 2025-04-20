@@ -4,7 +4,11 @@ import os
 import calendar
 import time
 import json
+import logging
+import sys
+
 from datetime import date
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with your actual secret key
@@ -27,6 +31,9 @@ kid_control_script = config['kid_control_script']
 error_file = config['error_file']
 task_status_file = config['task_status_file']
 
+# Configure logging to output to the system log
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
+
 def read_kidcontrol_config():
     with open(config_file, 'r') as file:
         data = file.readlines()
@@ -42,20 +49,41 @@ def check_kidcontrol_status():
         status = file.read().strip()
     return status
 
-def get_elapsed_time():
+def get_time(requested_key):
     if os.path.exists(time_record_file):
         with open(time_record_file, 'r') as file:
             config_data = file.readlines()
-        config = {line.split('=')[0]: int(line.split('=')[1]) for line in config_data if '=' in line}
+        # Filter out empty or invalid lines
+        config = {}
+        for line in config_data:
+            line = line.strip()  # Remove leading/trailing whitespace
+            if '=' in line:  # Ensure the line contains a key-value pair
+                key, value = line.split('=', 1)
+                try:
+                    config[key] = int(value)  # Convert value to integer
+                except ValueError:
+                    continue  # Skip lines with invalid integer values
         
         # Check if start_time exists in the config
-        if 'start_time' in config:
-            start_time = config['start_time']
-            current_time = int(time.time())
-            elapsed_time = (current_time - start_time) // 60  # Convert seconds to minutes
-            return elapsed_time
+        if requested_key in config:
+            return config[requested_key]
 
     return 0
+
+def get_elapsed_time():
+    start_time = get_time('start_time')
+    if start_time == 0:
+        start_time = get_time('stop_time') # If start_time is not set, use current time
+    
+    current_time = int(time.time())
+    elapsed_time = (current_time - start_time) // 60  # Convert seconds to minutes
+    return elapsed_time
+
+def get_total_elapsed_time():
+    return get_time('elapsed_time')
+
+def get_total_rest_time():
+    return get_time('rest_time')
 
 @app.route('/')
 def index():
@@ -80,21 +108,37 @@ def index():
     hours = read_kidcontrol_config()
     total_minutes_used = hours.pop('current', 0)  # Get 'current' from hours
 
-    hours.pop('period', 0)  # Remove 'period' from hours and get its value
-    hours.pop('restime', 0)  # Remove 'ending' from hours and get its value
+    defined_period = hours.pop('period', 0)  # Remove 'period' from hours and get its value
+    defined_restime = hours.pop('restime', 0)  # Remove 'ending' from hours and get its value
     hours.pop('starting', 0)  # Remove 'starting' from hours and get its value
     hours.pop('ending', 0)  # Remove 'ending' from hours and get its value
 
     # Get the maximum minutes allowed for today from the hours dictionary
     max_minutes = hours.get(time.strftime('%a').lower(), 0)  # Use the current day to get the max minutes
     
-    elapsed_time = get_elapsed_time() if counting_status == 'disabled' else 0
+    elapsed_time = get_elapsed_time()
     # Calculate remaining time
     remaining_time = max_minutes - total_minutes_used
     # Map abbreviated weekday names to full names
     full_weekday_names = {day[:3].lower(): day for day in calendar.day_name}
     hours = {full_weekday_names.get(day, day): minutes for day, minutes in hours.items()}
     
+    total_elapsed_time= get_total_elapsed_time()
+    total_rest_time= get_total_rest_time()
+    # Calculate the needed rest time
+
+    stop_times = total_elapsed_time / defined_period
+    required_rest_time = stop_times * defined_restime * defined_period / 100 
+    needed_rest_time = int(required_rest_time - total_rest_time - elapsed_time)
+
+    #logging.info(f"Total elapsed time: {total_elapsed_time}, Total rest time: {total_rest_time}, Elapsed time: {elapsed_time}, Needed rest time: {needed_rest_time}")
+
+    next_rest_time = int(total_elapsed_time + elapsed_time) if counting_status == 'disabled' else int(total_elapsed_time)
+    next_rest_time = next_rest_time % defined_period 
+    if next_rest_time > 0:
+        next_rest_time = defined_period - next_rest_time
+
+    #logging.info(f"next_rest_time: {next_rest_time}")
     # Check for error message
     if os.path.exists(error_file):
         with open(error_file, 'r') as file:
@@ -102,7 +146,7 @@ def index():
         flash(error_message)
         os.remove(error_file)
         
-    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time,task_status=today_status,current_day=current_day)
+    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time,task_status=today_status,current_day=current_day, needed_rest_time=needed_rest_time, next_rest_time=next_rest_time)
 
 @app.route('/adjust_time', methods=['POST'])
 def adjust_time():

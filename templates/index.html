@@ -83,7 +83,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
-            width: 130px;
+            width: 150px;
             height: 50px;
             font-family: 'Bebas Neue', cursive;
         }
@@ -191,15 +191,15 @@
             <p class="total-spent">Time left today: <span class="highlight">{{ remaining_time }}</span>
                 {% if counting_status == 'disabled' %}
                     <span class="highlight">- {{ elapsed_time }}</span>
-                {% endif %}
+                {% endif %} 
                 mins
             </p><p></p>
             <div class="button-container">
                 <form action="{{ url_for('startcount') }}" method="post">
-                    <button type="submit" class="start-button" {% if counting_status == 'disabled' %}disabled{% endif %}>Start counting</button>
+                    <button type="submit" class="start-button" {% if counting_status == 'disabled' or needed_rest_time > 0 %}disabled{% endif %}>Start counting {% if needed_rest_time > 0 %}({{ needed_rest_time }}){% endif %}</button>
                 </form>
                 <form action="{{ url_for('stopcount') }}" method="post">
-                    <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop counting</button>
+                    <button type="submit" class="stop-button" {% if counting_status == 'enabled' %}disabled{% endif %}>Stop counting {% if next_rest_time > 0 %}({{ next_rest_time }}){% endif %}</button>
                 </form>
             </div>
             <p></p>
