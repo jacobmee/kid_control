@@ -74,8 +74,10 @@
             display: inline-block;
         }
         .add-button {
-        background-color: #89b3d9; /* Blue color */
-        color: white;
+            background-color: #89b3d9; /* Blue color */
+            color: white;
+            width: 120px;
+            height: 50px;
         }
         button {
             padding: 8px 16px;
@@ -83,7 +85,6 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
-            width: 150px;
             height: 50px;
             font-family: 'Bebas Neue', cursive;
         }
@@ -96,11 +97,13 @@
             background-color: #464f70;
             font-family: 'Bungee Tint', cursive;
             color: white;
+            width: 150px;
         }
         .stop-button {
             background-color: #d8851d;
             font-family: 'Bungee Tint', cursive;
             color: white;
+            width: 150px;
         }
         .status-up {
             color: #31854b; /* Green color */
@@ -158,10 +161,12 @@
                     <input type="hidden" name="task" value="homework">
                     <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Homework (30)</button>
                 </form>
+                <!--
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="english">
                     <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>English work (15)</button>
                 </form>
+                -->
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="coding">
                     <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Coding (15)</button>
@@ -176,16 +181,15 @@
                     <input type="hidden" name="task" value="washes">
                     <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Clean yourself (15)</button>
                 </form>
+                {% if current_day in ['saturday', 'sunday'] %}
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="outdoor">
                     <button type="submit" class="add-button" 
-                        {% if current_day not in ['saturday', 'sunday'] %}
-                            style="display: none;"  <!-- Hides the button -->
-                        {% endif %}
                         {% if task_status.get('outdoor') %}disabled{% endif %}>
                         Outdoor (60)
                     </button>
                 </form>
+                {% endif %}
             </div>
             <p></p> <p></p>
             <p class="total-spent">Time left today: <span class="highlight">{{ remaining_time }}</span>

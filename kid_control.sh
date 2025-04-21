@@ -113,6 +113,7 @@ total_rest_time=0
 if [ -n "$stop_time" ]; then
     # Calculate the elapsed time since the last stop
     current_time=$(date +%s)
+    
     rest_time=$(( (current_time - stop_time) / 60 ))  # Convert seconds to minutes
     last_rest_time=$(get_time_record "rest_time")
     if [ -n "$last_rest_time" ]; then
@@ -178,9 +179,8 @@ if [ -n "$rule_id" ]; then
 
         # reset the needed time to just fine 
         #logger "Kid_control: New Rest: ($total_rest_time),Required: ($needed_rest_time) ."
-        if [ -n "$total_rest_time" ]; then
-            set_time_record "rest_time" "$total_rest_time"
-        fi
+        
+        set_time_record "rest_time" "$needed_rest_time"
         
         # Remove the stop time
         remove_time_record "stop_time"

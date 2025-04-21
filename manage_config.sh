@@ -77,8 +77,15 @@ reset_current_usage() {
 
     if [ "$current_day" != "$previous_day" ]; then
         logger "Kid_control: $current_day: $current_usage mins newly set"
+
+        # Set current=0
         sed -i "s/current=[-0-9]*/current=0/" "$config_file"
         date +%Y-%m-%d > "$current_day_file"
+        # Set elapsed_time=0, rest_time=0, and remove start_time, stop_time
+        sed -i "s/elapsed_time=[0-9]*/elapsed_time=0/" "$time_record_file"
+        sed -i "s/rest_time=[0-9]*/rest_time=0/" "$time_record_file"
+        sed -i "/^start_time=/d" "$time_record_file"
+        sed -i "/^stop_time=/d" "$time_record_file"
     fi
 }
 

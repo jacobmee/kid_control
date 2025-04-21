@@ -127,11 +127,11 @@ def index():
     total_rest_time= get_total_rest_time()
     # Calculate the needed rest time
 
-    stop_times = total_elapsed_time / defined_period
-    required_rest_time = stop_times * defined_restime * defined_period / 100 
+    stop_times = int(total_elapsed_time / defined_period)
+    required_rest_time = int(stop_times * defined_restime * defined_period / 100)
     needed_rest_time = int(required_rest_time - total_rest_time - elapsed_time)
 
-    #logging.info(f"Total elapsed time: {total_elapsed_time}, Total rest time: {total_rest_time}, Elapsed time: {elapsed_time}, Needed rest time: {needed_rest_time}")
+    #logging.info(f"Kid_control - Total elapsed time: {total_elapsed_time}, Required_rest_time: {required_rest_time}, Total rest time: {total_rest_time}, Elapsed time: {elapsed_time}, Needed rest time: {needed_rest_time}")
 
     next_rest_time = int(total_elapsed_time + elapsed_time) if counting_status == 'disabled' else int(total_elapsed_time)
     next_rest_time = next_rest_time % defined_period 
