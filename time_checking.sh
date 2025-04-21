@@ -86,7 +86,7 @@ if [ -n "$start_time" ] && [ "$start_time" -ne 0 ]; then
         "$kid_control_script" stopcounting
     else
         left_minutes=$((max_minutes - total_minutes_used))
-        logger "Time_checking: COUNTING ($left_minutes - $elapsed_time) minutes, RESTING: ($required_rest_time - $last_rest_time)"
+        logger "Time_checking: COUNTING ($left_minutes-$elapsed_time) mins, RESTING: ($required_rest_time-$last_rest_time) mins"
     fi  
 fi
 
@@ -99,5 +99,5 @@ if [ -n "$stop_time" ] && [ "$stop_time" -ne 0 ]; then
     # Get the maximum minutes allowed for today
     max_minutes=$(get_max_minutes_for_today)
     remaining_minutes=$((max_minutes - total_minutes_used))
-    logger "Time_checking: STOPPED: ($remaining_minutes minutes left). RESTING: ($required_rest_time - $last_rest_time - $elapsed_time)"
+    logger "Time_checking: STOPPED: $remaining_minutes mins left. RESTING: ($required_rest_time-$last_rest_time-$elapsed_time) mins"
 fi
