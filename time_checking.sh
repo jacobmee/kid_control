@@ -30,7 +30,12 @@ check_network_stability
 # Function to get a value from the time record file
 get_time_record() {
     local key=$1
-    grep "^$key=" "$time_record_file" | cut -d'=' -f2
+    local value=$(grep "^$key=" "$time_record_file" | cut -d'=' -f2)
+    if [ -z "$value" ]; then
+        echo 0  # Return 0 if the value is not found or empty
+    else
+        echo "$value"
+    fi
 }
 
 # Function to get a parameter value from kidcontrol.config
@@ -62,13 +67,12 @@ start_hour=$(get_config "starting")
 current_time=$(date +%s)
 
 last_elapsed_time=$(get_time_record "elapsed_time")
-stop_times=$((last_elapsed_time / defined_period))  # Integer division
-required_rest_time=$((defined_period * defined_restime * stop_times / 100))
 last_rest_time=$(get_time_record "rest_time")
 
 if [ -n "$start_time" ] && [ "$start_time" -ne 0 ]; then
-    
     elapsed_time=$(( (current_time - start_time) / 60 ))  # Convert seconds to minutes
+    stop_times=$(((last_elapsed_time + elapsed_time) / defined_period))  # Integer division
+    required_rest_time=$((defined_period * defined_restime * stop_times / 100))
 
     # Check if the total exceeds the maximum minutes, if elapsed time exceeds max_elapsed_time, or if it's after stop_hour or before start_hour
     current_hour=$(date +%H)
@@ -93,6 +97,8 @@ fi
 if [ -n "$stop_time" ] && [ "$stop_time" -ne 0 ]; then 
     
     elapsed_time=$(( (current_time - stop_time) / 60 ))  # Convert seconds to minutes
+    stop_times=$(((last_elapsed_time) / defined_period))  # Integer division
+    required_rest_time=$((defined_period * defined_restime * stop_times / 100))
 
     # Get the total minutes used today
     total_minutes_used=$(get_total_minutes_used)

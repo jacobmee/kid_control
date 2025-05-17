@@ -26,6 +26,7 @@ with open(config_path) as f:
 # Define paths using the sourced configuration
 config_file = config['config_file']
 status_file = config['status_file']
+devices_file = config['devices_file']
 time_record_file = config['time_record_file']
 kid_control_script = config['kid_control_script']
 error_file = config['error_file']
@@ -48,6 +49,18 @@ def check_kidcontrol_status():
     with open(status_file, 'r') as file:
         status = file.read().strip()
     return status
+
+def get_devices():
+    # Call the kid_control_script with the 'get_devices' action
+    subprocess.run(
+        ['sh', kid_control_script, 'get_devices'])
+
+    with open(devices_file, 'r') as file:
+        # Process the output from the script
+        devices_output = file.read().strip().split('\n')  # Split the output into lines
+        devices = [device.split(':') for device in devices_output]  # Split each line into name and status
+    return devices     
+
 
 def get_time(requested_key):
     if os.path.exists(time_record_file):
@@ -206,14 +219,29 @@ def stopcount():
 @app.route('/edit', methods=['GET', 'POST'])
 def edit_hours():
     if request.method == 'POST':
-        hours = request.form.to_dict()
+        # Save hours configuration
+        hours = {key: value for key, value in request.form.items() if key != 'devices'}
         with open(config_file, 'w') as file:
             for day, minutes in hours.items():
                 file.write(f'{day}={minutes}\n')
-        return redirect(url_for('index'))
+
+        # Save devices information
+        selected_devices = request.form.getlist('devices')  # Get the list of selected (enabled) devices
+        with open(devices_file, 'w') as file:
+            for device in get_devices():
+                device_name = device[0]
+                device_status = 'false' if device_name in selected_devices else 'true'
+                file.write(f'{device_name}:{device_status}\n')
+        
+        subprocess.run(
+            ['sh', kid_control_script, 'update_devices'])
+
+        return redirect(url_for('edit_hours'))
     
+    devices = get_devices()
+
     hours = read_kidcontrol_config()
-    return render_template('edit.html', hours=hours)
+    return render_template('edit.html', hours=hours, devices=devices)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

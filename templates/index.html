@@ -76,7 +76,6 @@
         .add-button {
             background-color: #89b3d9; /* Blue color */
             color: white;
-            width: 120px;
             height: 50px;
         }
         button {
@@ -128,6 +127,12 @@
                 padding: 10px; /* Add padding for better touch targets */
                 font-size: 1em; /* Adjust font size for readability */
             }
+            .start-button {
+                height: 80px;
+            }
+            .stop-button {
+                height: 80px;
+            }
         }
     </style>
 </head>
@@ -161,10 +166,10 @@
                     <input type="hidden" name="task" value="homework">
                     <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Homework (30)</button>
                 </form>
-                <!--
+                <!-- Add more buttons here 
                 <form action="{{ url_for('adjust_time') }}" method="post">
                     <input type="hidden" name="task" value="english">
-                    <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>English work (15)</button>
+                    <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>照顾翠花 (15)</button>
                 </form>
                 -->
                 <form action="{{ url_for('adjust_time') }}" method="post">

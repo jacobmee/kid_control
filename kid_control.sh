@@ -31,7 +31,7 @@ if [ ! -f "$time_record_file" ]; then
 fi
 
 # Validate action parameter
-if [ "$action" != "startcounting" ] && [ "$action" != "stopcounting" ] && [ "$action" != "check_status" ] && [ "$action" != "update" ]; then
+if [ "$action" != "startcounting" ] && [ "$action" != "stopcounting" ] && [ "$action" != "check_status" ] && [ "$action" != "get_devices" ] && [ "$action" != "update_devices" ] && [ "$action" != "update" ]; then
     echo "Invalid action. Use 'startcounting', 'stopcounting', 'check_status', or 'update'." > "$error_file"
     exit 1
 fi
@@ -59,10 +59,97 @@ check_kidcontrol_status() {
     fi
 }
 
+# Function to get all devices under the maximum allowed time
+get_devices_under_max() {
+    local devices=$(curl -s -u "$username:$password" "http://$router_ip/rest/ip/kid-control/device")
+
+    # Clear the devices_file before writing
+    : > "$devices_file"
+
+    # Use process substitution to avoid subshell issues
+    echo "$devices" | jq -c '.[]' | while read -r device; do
+        local name=$(echo "$device" | jq -r '.name')
+        local user=$(echo "$device" | jq -r '.user' | tr -d '\n' | tr -d '\r' | xargs)  # Clean user
+        local disabled=$(echo "$device" | jq -r '.disabled')
+
+        # Check if user is empty
+        if [ -z "$user" ]; then
+            continue
+        fi
+
+        # Filter devices by user
+        #logger "user: [$user], [$rule_name], name: $name, disabled: $disabled"
+        if [ "$user" = "$rule_name" ]; then
+            echo "$name:$disabled" >> "$devices_file"
+        else
+            logger "No match: [$user] != [$rule_name]"
+        fi
+    done 
+}
+
+# Function to get all devices under the maximum allowed time
+update_devices_under_max() {
+    # Ensure the devices_file exists
+    if [ ! -f "$devices_file" ]; then
+        logger "Device file not found: $devices_file"
+        exit 1
+    fi
+
+    # Read the devices from the devices_file
+    while IFS=: read -r device_name device_status; do
+        # Fetch the device information from RouterOS
+        device_info=$(curl -s -u "$username:$password" "http://$router_ip/rest/ip/kid-control/device" | jq -c --arg name "$device_name" '.[] | select(.name == $name)')
+
+        if [ -z "$device_info" ]; then
+            logger "Device not found on RouterOS: $device_name"
+            continue
+        fi
+
+        # Debugging: Log the device info
+        #logger "Device info for $device_name: $device_info"
+
+        # Extract the device ID
+        device_id=$(echo "$device_info" | jq -r '."id" // .".id"')
+        if [ -z "$device_id" ]; then
+            logger "Device ID not found for $device_name"
+            continue
+        fi
+
+        # Debugging: Log the device ID
+        logger "Device ID for $device_name -> $device_status"
+
+        # Update the device status and ensure the "name" field is included
+        updated_device=$(echo "$device_info" | jq --arg status "$device_status" --arg name "$device_name" \
+            '.disabled = $status | .name = $name | del(.["blocked"], .["ip-address"], .["idle-time"], .["bytes-down"], .["bytes-up"], .["rate-down"], .["rate-up"], .["activity"], .["dynamic"], .["inactive"], .["limited"], .["paused"])')
+
+        # Debugging: Log the updated device payload
+        #logger "Updated device payload for $device_name [$device_status]: $updated_device"
+
+        # Send the updated device information back to RouterOS
+        response=$(curl -s -u "$username:$password" -X PUT "http://$router_ip/rest/ip/kid-control/device/$device_id" \
+            -H "Content-Type: application/json" \
+            -d "$updated_device")
+
+        # Log the response
+        #logger "Updated device: $device_name, Status: $device_status, Response: $response"
+    done < "$devices_file"
+}
+
 # Handle the check_status action
 if [ "$action" = "check_status" ]; then
     check_kidcontrol_status
     "$manage_config_script" reset
+    exit 0
+fi
+
+# Handle the check_status action
+if [ "$action" = "get_devices" ]; then
+    get_devices_under_max
+    exit 0
+fi
+
+if [ "$action" = "update_devices" ]; then
+    update_devices_under_max
     exit 0
 fi
 
