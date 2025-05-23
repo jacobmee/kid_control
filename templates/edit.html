@@ -93,18 +93,43 @@
         }
     </style>
     <script>
-        // Show a password modal when the page loads
         document.addEventListener('DOMContentLoaded', function () {
-            const correctPassword = "lilyismymom"; // Replace with your desired password
             const modal = document.getElementById('password-modal');
             const passwordInput = document.getElementById('password-input');
             const submitButton = document.getElementById('password-submit');
 
+            // First check if password was already validated
+            fetch('/check_password_status')
+                .then(response => response.text())
+                .then(status => {
+                    if (status === "invalid") {
+                        modal.style.display = 'flex';
+                    } else {
+                        modal.style.display = 'none';
+                    }
+                });
+
             submitButton.addEventListener('click', function () {
-                if (passwordInput.value === correctPassword) {
-                    modal.style.display = 'none'; // Hide the modal
-                } else {
-                    alert("Incorrect password. Please try again.");
+                fetch('/validate_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'password=' + encodeURIComponent(passwordInput.value)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        modal.style.display = 'none';
+                    } else {
+                        alert("Incorrect password. Please try again.");
+                    }
+                });
+            });
+
+            // Handle Enter key
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    submitButton.click();
                 }
             });
         });

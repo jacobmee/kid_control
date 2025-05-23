@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, session
 import os
 import calendar
 import time
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from config import Config, setup_logger
 from time_control import TimeControl
@@ -249,6 +249,23 @@ def edit_hours():
     devices = get_devices()
     hours = read_kidcontrol_config()
     return render_template('edit.html', hours=hours, devices=devices)
+
+@app.route('/validate_password', methods=['POST'])
+def validate_password():
+    password = request.form.get('password')
+    if password == "lilyismymom":  # Match the password
+        session['password_validated'] = datetime.now().timestamp()
+        return "success"
+    return "failed", 401
+
+@app.route('/check_password_status')
+def check_password_status():
+    validated_time = session.get('password_validated')
+    if validated_time:
+        # Check if validation was within last 2 hours
+        if datetime.now().timestamp() - validated_time < 7200:  # 2 hours in seconds
+            return "valid"
+    return "invalid"
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
