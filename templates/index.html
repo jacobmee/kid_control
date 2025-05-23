@@ -139,7 +139,7 @@
 <body>
     <div class="container">
         {% with messages = get_flashed_messages() %}
-            {% if messages %}
+            {% if messages and messages|length > 0 %}
                 <ul class="flashes">
                     {% for message in messages %}
                         <li>{{ message }}</li>

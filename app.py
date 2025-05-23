@@ -134,7 +134,7 @@ def index():
         required_rest_time = int(stop_times * defined_restime * defined_period / 100) if defined_period > 0 else 0
         needed_rest_time = int(required_rest_time - total_rest_time - elapsed_time)
 
-        next_rest_time = int(total_elapsed_time + elapsed_time) if network_status == 'disabled' else int(total_elapsed_time)
+        next_rest_time = int(total_elapsed_time + elapsed_time) if network_status == 'enabled' else int(total_elapsed_time)
         next_rest_time = next_rest_time % defined_period if defined_period > 0 else 0
         if next_rest_time > 0:
             next_rest_time = defined_period - next_rest_time
@@ -143,7 +143,8 @@ def index():
         if os.path.exists(config.error_file):
             with open(config.error_file, 'r') as file:
                 error_message = file.read().strip()
-            flash(error_message)
+            if error_message:  # Only flash if there's actually a message
+                flash(error_message)
             os.remove(config.error_file)
 
         # Update template variables
@@ -215,14 +216,14 @@ def adjust_time():
 @app.route('/startcount', methods=['POST'])
 def startcount():
     success, message = time_control.start_counting()
-    if not success:
+    if not success and message:  # Only flash if there's a message
         flash(message)
     return redirect(url_for('index'))
 
 @app.route('/stopcount', methods=['POST'])
 def stopcount():
     success, message = time_control.stop_counting()
-    if not success:
+    if not success and message:  # Only flash if there's a message
         flash(message)
     return redirect(url_for('index'))
 

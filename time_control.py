@@ -116,6 +116,9 @@ class TimeControl:
         if not self.router.update_rule_status(False):
             return False, "Failed to update router rule"
         
+        # Initialize elapsed_time
+        elapsed_time = 0
+        
         # Get start time and calculate elapsed time
         start_time = self.config.get_time_record('start_time')
         if start_time and start_time != '0':
