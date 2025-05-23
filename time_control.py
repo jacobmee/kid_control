@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import time
-from datetime import datetime
+from datetime import datetime, date
 import subprocess
 from config import Config, setup_logger
 from router_control import RouterControl
@@ -65,7 +65,6 @@ class TimeControl:
         
         current_time = int(time.time())
         rest_time = (current_time - int(stop_time)) // 60  # Convert to minutes
-        
         last_rest_time = int(self.config.get_time_record('rest_time') or '0')
         total_rest_time = rest_time + last_rest_time
         
@@ -78,6 +77,8 @@ class TimeControl:
         
         if total_rest_time < needed_rest_time:
             return False, f"Not enough rest time: {total_rest_time} minutes taken, {needed_rest_time} minutes required"
+
+        self.config.set_time_record('rest_time', str(needed_rest_time))  
         
         return True, None
     
@@ -107,7 +108,7 @@ class TimeControl:
 
         left_minutes = self.get_max_minutes_for_today() - self.get_total_minutes_used()
         logger.info(f"+++ [START] counting - {left_minutes} mins remaining +++")
-        
+
         return True, "Started counting time"
     
     def stop_counting(self):
@@ -124,7 +125,7 @@ class TimeControl:
         if start_time and start_time != '0':
             current_time = int(time.time())
             elapsed_time = (current_time - int(start_time)) // 60  # Convert to minutes
-            
+ 
             # Update elapsed time
             last_elapsed_time = int(self.config.get_time_record('elapsed_time') or '0')
             total_elapsed_time = last_elapsed_time + elapsed_time
@@ -153,6 +154,14 @@ def time_checking():
     
     # Check network stability
     time_control.check_network_stability()
+    
+    # Reset current usage if it's a new day
+    today = str(date.today())
+    last_reset_day = config.get_config_value('last_reset_day')
+    if last_reset_day != today:
+        config.reset_current_usage()
+        config.set_config_value('last_reset_day', today)
+        logger.info(f"[NEW DAY]: Reset current usage for new day: {today}")
     
     # Get current time
     current_time = int(time.time())
@@ -197,7 +206,7 @@ def time_checking():
             time_control.stop_counting()
         else:
             left_minutes = max_minutes - total_minutes_used
-            logger.info(f"[RUNNING] ({left_minutes}-{elapsed_time}) mins, RESTING: ({required_rest_time}-{last_rest_time}) mins")
+            logger.info(f"[RUNNING] ({left_minutes}-{elapsed_time}) mins, RESTING: ({required_rest_time}>{last_rest_time}) mins")
     
     if stop_time and stop_time != '0':
         elapsed_time = (current_time - int(stop_time)) // 60  # Convert seconds to minutes
@@ -209,7 +218,7 @@ def time_checking():
         max_minutes = int(config.get_config_value(current_day) or '0')
         remaining_minutes = max_minutes - total_minutes_used
         
-        logger.info(f"[IDLE]: {remaining_minutes} mins left. RESTING: ({required_rest_time}-{last_rest_time}-{elapsed_time}) mins")
+        logger.info(f"[IDLE]: {remaining_minutes} mins available. RESTING: ({required_rest_time}-{last_rest_time}<{elapsed_time}) mins")
 
 if __name__ == "__main__":
     time_checking() 
