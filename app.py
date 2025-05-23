@@ -1,92 +1,61 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-import subprocess
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response
 import os
 import calendar
 import time
 import json
-import logging
 import sys
-
 from datetime import date
 
+from config import Config, setup_logger
+from time_control import TimeControl
+from router_control import RouterControl
+
+# Get logger
+logger = setup_logger('KID.CONTROL')
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with your actual secret key
 
-# Source the configuration file
-config_path = '/home/jacob/apps/kid_control/prop.config'
-config = {}
-with open(config_path) as f:
-    for line in f:
-        line = line.strip()
-        if line and not line.startswith('#') and '=' in line:
-            name, value = line.split('=', 1)
-            config[name] = value
+# Initialize our Python classes
+config = Config()
+time_control = TimeControl()
+router_control = RouterControl()
 
-# Define paths using the sourced configuration
-config_file = config['config_file']
-status_file = config['status_file']
-devices_file = config['devices_file']
-time_record_file = config['time_record_file']
-kid_control_script = config['kid_control_script']
-error_file = config['error_file']
-task_status_file = config['task_status_file']
-
-# Configure logging to output to the system log
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', stream=sys.stdout)
+# Add after_request handler to prevent caching
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 def read_kidcontrol_config():
-    with open(config_file, 'r') as file:
-        data = file.readlines()
     hours = {}
-    for line in data:
-        key, value = line.strip().split('=')
-        hours[key] = int(value)
+    for key in ['period', 'restime', 'starting', 'ending', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'current']:
+        value = config.get_config_value(key)
+        if value:
+            hours[key] = int(value)
     return hours
 
-def check_kidcontrol_status():
-    subprocess.run(['sh', kid_control_script, 'check_status'])
-    with open(status_file, 'r') as file:
-        status = file.read().strip()
-    return status
+def check_firewall_status():
+    status = router_control.check_firewall_status()
+    return status or "unknown"
 
 def get_devices():
-    # Call the kid_control_script with the 'get_devices' action
-    subprocess.run(
-        ['sh', kid_control_script, 'get_devices'])
-
-    with open(devices_file, 'r') as file:
-        # Process the output from the script
-        devices_output = file.read().strip().split('\n')  # Split the output into lines
-        devices = [device.split(':') for device in devices_output]  # Split each line into name and status
-    return devices     
-
+    if router_control.get_devices_under_max():
+        with open(config.devices_file, 'r') as file:
+            devices_output = file.read().strip().split('\n')
+            devices = [device.split(':') for device in devices_output if device.strip()]
+        return devices
+    return []
 
 def get_time(requested_key):
-    if os.path.exists(time_record_file):
-        with open(time_record_file, 'r') as file:
-            config_data = file.readlines()
-        # Filter out empty or invalid lines
-        config = {}
-        for line in config_data:
-            line = line.strip()  # Remove leading/trailing whitespace
-            if '=' in line:  # Ensure the line contains a key-value pair
-                key, value = line.split('=', 1)
-                try:
-                    config[key] = int(value)  # Convert value to integer
-                except ValueError:
-                    continue  # Skip lines with invalid integer values
-        
-        # Check if start_time exists in the config
-        if requested_key in config:
-            return config[requested_key]
-
-    return 0
+    return int(config.get_time_record(requested_key) or '0')
 
 def get_elapsed_time():
     start_time = get_time('start_time')
     if start_time == 0:
-        start_time = get_time('stop_time') # If start_time is not set, use current time
+        start_time = get_time('stop_time')  # If start_time is not set, use current time
     
     current_time = int(time.time())
     elapsed_time = (current_time - start_time) // 60  # Convert seconds to minutes
@@ -100,66 +69,105 @@ def get_total_rest_time():
 
 @app.route('/')
 def index():
-    
-    today = str(date.today())
-    # Load task status
-
-    current_day = date.today().strftime('%A').lower()  # Get the current day (e.g., "saturday", "sunday")
-    counting_status = check_kidcontrol_status()
-
-# Initialize task status file if it doesn't exist
-    if not os.path.exists(task_status_file):
-        with open(task_status_file, 'w') as f:
-            json.dump({}, f)
-            
-    with open(task_status_file, 'r') as f:
-        task_status = json.load(f)
-    
-    # Get today's task status
-    today_status = task_status.get(today, {})
-
-    hours = read_kidcontrol_config()
-    total_minutes_used = hours.pop('current', 0)  # Get 'current' from hours
-
-    defined_period = hours.pop('period', 0)  # Remove 'period' from hours and get its value
-    defined_restime = hours.pop('restime', 0)  # Remove 'ending' from hours and get its value
-    hours.pop('starting', 0)  # Remove 'starting' from hours and get its value
-    hours.pop('ending', 0)  # Remove 'ending' from hours and get its value
-
-    # Get the maximum minutes allowed for today from the hours dictionary
-    max_minutes = hours.get(time.strftime('%a').lower(), 0)  # Use the current day to get the max minutes
-    
-    elapsed_time = get_elapsed_time()
-    # Calculate remaining time
-    remaining_time = max_minutes - total_minutes_used
-    # Map abbreviated weekday names to full names
-    full_weekday_names = {day[:3].lower(): day for day in calendar.day_name}
-    hours = {full_weekday_names.get(day, day): minutes for day, minutes in hours.items()}
-    
-    total_elapsed_time= get_total_elapsed_time()
-    total_rest_time= get_total_rest_time()
-    # Calculate the needed rest time
-
-    stop_times = int(total_elapsed_time / defined_period)
-    required_rest_time = int(stop_times * defined_restime * defined_period / 100)
-    needed_rest_time = int(required_rest_time - total_rest_time - elapsed_time)
-
-    #logging.info(f"Kid_control - Total elapsed time: {total_elapsed_time}, Required_rest_time: {required_rest_time}, Total rest time: {total_rest_time}, Elapsed time: {elapsed_time}, Needed rest time: {needed_rest_time}")
-
-    next_rest_time = int(total_elapsed_time + elapsed_time) if counting_status == 'disabled' else int(total_elapsed_time)
-    next_rest_time = next_rest_time % defined_period 
-    if next_rest_time > 0:
-        next_rest_time = defined_period - next_rest_time
-
-    #logging.info(f"next_rest_time: {next_rest_time}")
-    # Check for error message
-    if os.path.exists(error_file):
-        with open(error_file, 'r') as file:
-            error_message = file.read().strip()
-        flash(error_message)
-        os.remove(error_file)
+    try:
+        today = str(date.today())
+        current_day = date.today().strftime('%A').lower()
+        network_status = check_firewall_status()
         
-    return render_template('index.html', hours=hours, total_minutes_used=total_minutes_used, counting_status=counting_status, elapsed_time=elapsed_time, remaining_time=remaining_time,task_status=today_status,current_day=current_day, needed_rest_time=needed_rest_time, next_rest_time=next_rest_time)
+        # Initialize task status file if it doesn't exist
+        if not os.path.exists(config.task_status_file):
+            logger.info("KID.CONTROL [INDEX] Creating new task status file")
+            with open(config.task_status_file, 'w') as f:
+                json.dump({}, f)
+            
+        try:
+            with open(config.task_status_file, 'r') as f:
+                task_status = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.error(f"KID.CONTROL [INDEX] Error reading task status: {str(e)}")
+            task_status = {}
+        
+        # Get today's task status
+        today_status = task_status.get(today, {})
+
+        hours = read_kidcontrol_config()
+        if not hours:
+            logger.error("KID.CONTROL [INDEX] Failed to read kidcontrol config")
+            flash("Error: Could not read configuration")
+            return redirect(url_for('index'))
+
+        # Set default values for all template variables
+        template_vars = {
+            'hours': {},
+            'total_minutes_used': 0,
+            'network_status': 'unknown',
+            'elapsed_time': 0,
+            'remaining_time': 0,
+            'task_status': {},
+            'current_day': current_day,
+            'needed_rest_time': 0,
+            'next_rest_time': 0
+        }
+
+        # Update with actual values
+        total_minutes_used = hours.pop('current', 0)
+        defined_period = hours.pop('period', 0)
+        defined_restime = hours.pop('restime', 0)
+        hours.pop('starting', 0)
+        hours.pop('ending', 0)
+
+        # Get the maximum minutes allowed for today
+        max_minutes = hours.get(time.strftime('%a').lower(), 0)
+        
+        elapsed_time = get_elapsed_time()
+        remaining_time = max_minutes - total_minutes_used
+        
+        # Map abbreviated weekday names to full names
+        full_weekday_names = {day[:3].lower(): day for day in calendar.day_name}
+        hours = {full_weekday_names.get(day, day): minutes for day, minutes in hours.items()}
+        
+        total_elapsed_time = get_total_elapsed_time()
+        total_rest_time = get_total_rest_time()
+
+        # Calculate the needed rest time
+        stop_times = int(total_elapsed_time / defined_period) if defined_period > 0 else 0
+        required_rest_time = int(stop_times * defined_restime * defined_period / 100) if defined_period > 0 else 0
+        needed_rest_time = int(required_rest_time - total_rest_time - elapsed_time)
+
+        next_rest_time = int(total_elapsed_time + elapsed_time) if network_status == 'disabled' else int(total_elapsed_time)
+        next_rest_time = next_rest_time % defined_period if defined_period > 0 else 0
+        if next_rest_time > 0:
+            next_rest_time = defined_period - next_rest_time
+
+        # Check for error message
+        if os.path.exists(config.error_file):
+            with open(config.error_file, 'r') as file:
+                error_message = file.read().strip()
+            flash(error_message)
+            os.remove(config.error_file)
+
+        # Update template variables
+        template_vars.update({
+            'hours': hours,
+            'total_minutes_used': total_minutes_used,
+            'network_status': network_status,
+            'elapsed_time': elapsed_time,
+            'remaining_time': remaining_time,
+            'task_status': today_status,
+            'needed_rest_time': needed_rest_time,
+            'next_rest_time': next_rest_time
+        })
+        
+        try:
+            return render_template('index.html', **template_vars)
+        except Exception as template_error:
+            logger.error(f"KID.CONTROL [INDEX] Template rendering error: {str(template_error)}")
+            logger.error(f"KID.CONTROL [INDEX] Template path: {app.template_folder}/index.html")
+            raise
+    except Exception as e:
+        logger.error(f"KID.CONTROL [INDEX] Error loading page: {str(e)}")
+        flash("An error occurred while loading the page")
+        return redirect(url_for('index'))
 
 @app.route('/adjust_time', methods=['POST'])
 def adjust_time():
@@ -167,8 +175,11 @@ def adjust_time():
     today = str(date.today())
 
     # Load task status
-    with open(task_status_file, 'r') as f:
-        task_status = json.load(f)
+    try:
+        with open(config.task_status_file, 'r') as f:
+            task_status = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        task_status = {}
 
     # Check if the task has already been completed today
     if task_status.get(today, {}).get(task):
@@ -181,39 +192,38 @@ def adjust_time():
     task_status[today][task] = True
 
     # Save the updated task status
-    with open(task_status_file, 'w') as f:
+    with open(config.task_status_file, 'w') as f:
         json.dump(task_status, f)
 
-    # Call the kid_control script to adjust time
-    if task == 'homework':
-        subprocess.run([kid_control_script, 'update', 'current', '-30'])
-        flash("30 minutes charged for finishing homework.")
-    elif task == 'english':
-        subprocess.run([kid_control_script, 'update', 'current', '-15'])
-        flash("15 minutes charged for finishing english homework.")
-    elif task == 'coding':
-        subprocess.run([kid_control_script, 'update', 'current', '-15'])
-        flash("15 minutes charged for finishing coding.")
-    elif task == 'noyelling':
-        subprocess.run([kid_control_script, 'update', 'current', '-15'])
-        flash("15 minutes charged for being a gentleman.")
-    elif task == 'washes':
-        subprocess.run([kid_control_script, 'update', 'current', '-15'])
-        flash("15 minutes charged for finishing washes.")
-    elif task == 'outdoor':
-        subprocess.run([kid_control_script, 'update', 'current', '-60'])
-        flash("60 minutes charged for finishing outdoor.")
-    return redirect(url_for('index'))
+    # Adjust time based on task
+    time_adjustments = {
+        'homework': -30,
+        'english': -15,
+        'coding': -15,
+        'noyelling': -15,
+        'washes': -15,
+        'outdoor': -60
+    }
 
+    if task in time_adjustments:
+        minutes = time_adjustments[task]
+        config.update_current_usage(minutes)
+        flash(f"{abs(minutes)} minutes charged for finishing {task}.")
+
+    return redirect(url_for('index'))
 
 @app.route('/startcount', methods=['POST'])
 def startcount():
-    subprocess.run(['sh', kid_control_script, 'startcounting'])
+    success, message = time_control.start_counting()
+    if not success:
+        flash(message)
     return redirect(url_for('index'))
 
 @app.route('/stopcount', methods=['POST'])
 def stopcount():
-    subprocess.run(['sh', kid_control_script, 'stopcounting'])
+    success, message = time_control.stop_counting()
+    if not success:
+        flash(message)
     return redirect(url_for('index'))
 
 @app.route('/edit', methods=['GET', 'POST'])
@@ -221,25 +231,21 @@ def edit_hours():
     if request.method == 'POST':
         # Save hours configuration
         hours = {key: value for key, value in request.form.items() if key != 'devices'}
-        with open(config_file, 'w') as file:
-            for day, minutes in hours.items():
-                file.write(f'{day}={minutes}\n')
+        for day, minutes in hours.items():
+            config.set_config_value(day, minutes)
 
         # Save devices information
-        selected_devices = request.form.getlist('devices')  # Get the list of selected (enabled) devices
-        with open(devices_file, 'w') as file:
+        selected_devices = request.form.getlist('devices')
+        with open(config.devices_file, 'w') as file:
             for device in get_devices():
                 device_name = device[0]
                 device_status = 'false' if device_name in selected_devices else 'true'
                 file.write(f'{device_name}:{device_status}\n')
         
-        subprocess.run(
-            ['sh', kid_control_script, 'update_devices'])
-
+        router_control.update_devices_under_max()
         return redirect(url_for('edit_hours'))
     
     devices = get_devices()
-
     hours = read_kidcontrol_config()
     return render_template('edit.html', hours=hours, devices=devices)
 
