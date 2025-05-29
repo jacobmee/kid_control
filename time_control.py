@@ -161,10 +161,10 @@ def time_checking():
     
     # Reset current usage if it's a new day
     today = str(date.today())
-    last_reset_day = config.get_config_value('last_reset_day')
+    data = config.get_data()
+    last_reset_day = data['current_day']
     if last_reset_day != today:
         config.reset_current_usage()
-        config.set_config_value('last_reset_day', today)
         logger.info(f"[NEW DAY]: Reset current usage for new day: {today}")
     
     # Get current time
