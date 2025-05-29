@@ -43,10 +43,8 @@ def check_firewall_status():
 
 def get_devices():
     if router_control.get_devices_under_max():
-        with open(config.devices_file, 'r') as file:
-            devices_output = file.read().strip().split('\n')
-            devices = [device.split(':') for device in devices_output if device.strip()]
-        return devices
+        devices = config.get_data('devices')
+        return [device.split(':') for device in devices if device.strip()]
     return []
 
 def get_time(requested_key):
@@ -74,20 +72,8 @@ def index():
         current_day = date.today().strftime('%A').lower()
         network_status = check_firewall_status()
         
-        # Initialize task status file if it doesn't exist
-        if not os.path.exists(config.task_status_file):
-            logger.info("KID.CONTROL [INDEX] Creating new task status file")
-            with open(config.task_status_file, 'w') as f:
-                json.dump({}, f)
-            
-        try:
-            with open(config.task_status_file, 'r') as f:
-                task_status = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            logger.error(f"KID.CONTROL [INDEX] Error reading task status: {str(e)}")
-            task_status = {}
-        
-        # Get today's task status
+        # Get task status for today
+        task_status = config.get_data('task_status')
         today_status = task_status.get(today, {})
 
         hours = read_kidcontrol_config()
@@ -139,14 +125,6 @@ def index():
         if next_rest_time > 0:
             next_rest_time = defined_period - next_rest_time
 
-        # Check for error message
-        if os.path.exists(config.error_file):
-            with open(config.error_file, 'r') as file:
-                error_message = file.read().strip()
-            if error_message:  # Only flash if there's actually a message
-                flash(error_message)
-            os.remove(config.error_file)
-
         # Update template variables
         template_vars.update({
             'hours': hours,
@@ -175,12 +153,8 @@ def adjust_time():
     task = request.form.get('task')
     today = str(date.today())
 
-    # Load task status
-    try:
-        with open(config.task_status_file, 'r') as f:
-            task_status = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        task_status = {}
+    # Get task status
+    task_status = config.get_data('task_status')
 
     # Check if the task has already been completed today
     if task_status.get(today, {}).get(task):
@@ -193,8 +167,8 @@ def adjust_time():
     task_status[today][task] = True
 
     # Save the updated task status
-    with open(config.task_status_file, 'w') as f:
-        json.dump(task_status, f)
+    config.data['task_status'] = task_status
+    config._save_data()
 
     # Adjust time based on task
     time_adjustments = {
@@ -237,12 +211,17 @@ def edit_hours():
 
         # Save devices information
         selected_devices = request.form.getlist('devices')
-        with open(config.devices_file, 'w') as file:
-            for device in get_devices():
-                device_name = device[0]
-                device_status = 'false' if device_name in selected_devices else 'true'
-                file.write(f'{device_name}:{device_status}\n')
+        devices = []
+        for device in get_devices():
+            device_name = device[0]
+            device_status = 'false' if device_name in selected_devices else 'true'
+            devices.append(f'{device_name}:{device_status}')
         
+        # Get fresh data before updating
+        data = config.get_data()
+        data['devices'] = devices
+        config.data = data
+        config._save_data()
         router_control.update_devices_under_max()
         return redirect(url_for('edit_hours'))
     

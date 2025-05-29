@@ -44,15 +44,11 @@ class Config:
         
         # File paths
         self.config_file = os.path.join(self.base_dir, 'kidcontrol.config')
-        self.time_record_file = os.path.join(self.base_dir, 'time_record.txt')
-        self.status_file = os.path.join(self.base_dir, 'status.txt')
-        self.devices_file = os.path.join(self.base_dir, 'devices.txt')
-        self.current_day_file = os.path.join(self.base_dir, 'current_day.txt')
-        self.error_file = os.path.join(self.base_dir, 'error_message.txt')
-        self.task_status_file = os.path.join(self.base_dir, 'task_status.json')
+        self.data_file = os.path.join(self.base_dir, 'kid_control_data.json')
         
         # Initialize files if they don't exist
         self._initialize_files()
+        self._load_data()
     
     def _initialize_files(self):
         """Initialize configuration files if they don't exist."""
@@ -71,16 +67,46 @@ class Config:
                 f.write("sun=75\n")
                 f.write("current=0\n")
         
-        if not os.path.exists(self.current_day_file):
-            with open(self.current_day_file, 'w') as f:
-                f.write(datetime.now().strftime('%Y-%m-%d'))
-        
-        # Create empty files if they don't exist
-        for file_path in [self.time_record_file, self.status_file, 
-                         self.devices_file, self.error_file, 
-                         self.task_status_file]:
-            if not os.path.exists(file_path):
-                open(file_path, 'w').close()
+        if not os.path.exists(self.data_file):
+            initial_data = {
+                'time_records': {},
+                'status': '',
+                'devices': [],
+                'current_day': datetime.now().strftime('%Y-%m-%d'),
+                'task_status': {}
+            }
+            with open(self.data_file, 'w') as f:
+                json.dump(initial_data, f, indent=4)
+    
+    def _load_data(self):
+        """Load data from JSON file."""
+        try:
+            with open(self.data_file, 'r') as f:
+                self.data = json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading data file: {str(e)}")
+            self.data = {
+                'time_records': {},
+                'status': '',
+                'devices': [],
+                'current_day': datetime.now().strftime('%Y-%m-%d'),
+                'task_status': {}
+            }
+    
+    def get_data(self, key=None):
+        """Get fresh data from file. If key is provided, return that specific key's value."""
+        self._load_data()  # Always reload from file
+        if key is not None:
+            return self.data.get(key, {} if isinstance(self.data.get(key), dict) else '')
+        return self.data
+    
+    def _save_data(self):
+        """Save data to JSON file."""
+        try:
+            with open(self.data_file, 'w') as f:
+                json.dump(self.data, f, indent=4)
+        except Exception as e:
+            logger.error(f"Error saving data file: {str(e)}")
     
     def get_config_value(self, key):
         """Get a value from the configuration file."""
@@ -114,46 +140,32 @@ class Config:
             logger.error(f"Error setting config value for {key}: {str(e)}")
     
     def get_time_record(self, key):
-        """Get a value from the time record file."""
+        """Get a value from time records."""
         try:
-            with open(self.time_record_file, 'r') as f:
-                for line in f:
-                    if line.startswith(f"{key}="):
-                        return line.strip().split('=')[1]
-            return "0"
+            data = self.get_data()
+            return str(data['time_records'].get(key, "0"))
         except Exception as e:
             logger.error(f"Error reading time record for {key}: {str(e)}")
             return "0"
     
     def set_time_record(self, key, value):
-        """Set a value in the time record file."""
+        """Set a value in time records."""
         try:
-            with open(self.time_record_file, 'r') as f:
-                lines = f.readlines()
-            
-            found = False
-            with open(self.time_record_file, 'w') as f:
-                for line in lines:
-                    if line.startswith(f"{key}="):
-                        f.write(f"{key}={value}\n")
-                        found = True
-                    else:
-                        f.write(line)
-                if not found:
-                    f.write(f"{key}={value}\n")
+            data = self.get_data()
+            data['time_records'][key] = value
+            self.data = data
+            self._save_data()
         except Exception as e:
             logger.error(f"Error setting time record for {key}: {str(e)}")
     
     def remove_time_record(self, key):
-        """Remove a value from the time record file."""
+        """Remove a value from time records."""
         try:
-            with open(self.time_record_file, 'r') as f:
-                lines = f.readlines()
-            
-            with open(self.time_record_file, 'w') as f:
-                for line in lines:
-                    if not line.startswith(f"{key}="):
-                        f.write(line)
+            data = self.get_data()
+            if key in data['time_records']:
+                del data['time_records'][key]
+                self.data = data
+                self._save_data()
         except Exception as e:
             logger.error(f"Error removing time record for {key}: {str(e)}")
     
@@ -163,21 +175,21 @@ class Config:
         current_day = datetime.now().strftime('%Y-%m-%d')
         
         try:
-            with open(self.current_day_file, 'r') as f:
-                previous_day = f.read().strip()
+            data = self.get_data()
+            previous_day = data['current_day']
             
             if current_day != previous_day:
                 #logger.info(f"Kid_control: {current_day}: {current_usage} mins newly set")
                 
                 # Reset all counters
                 self.set_config_value('current', '0')
-                with open(self.current_day_file, 'w') as f:
-                    f.write(current_day)
-                
-                self.set_time_record('elapsed_time', '0')
-                self.set_time_record('rest_time', '0')
-                self.remove_time_record('start_time')
-                self.remove_time_record('stop_time')
+                data['current_day'] = current_day
+                data['time_records'] = {
+                    'elapsed_time': '0',
+                    'rest_time': '0'
+                }
+                self.data = data
+                self._save_data()
         except Exception as e:
             logger.error(f"Error resetting current usage: {str(e)}")
     

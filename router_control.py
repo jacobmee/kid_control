@@ -23,12 +23,15 @@ class RouterControl:
                     if rule.get('disabled') == 'true':
                         network_status = "enabled"
                     else:
-                        network_status  = "disabled"
+                        network_status = "disabled"
 
                     #logger.info(f"KidControl: Rule is: {network_status}, Rule is: {rule.get('disabled')}")
 
-                    with open(self.config.status_file, 'w') as f:
-                        f.write(network_status)
+                    # Update status in JSON data
+                    data = self.config.get_data()
+                    data['status'] = network_status
+                    self.config.data = data
+                    self.config._save_data()
                     return network_status
             
             logger.error("Rule not found in router configuration")
@@ -43,22 +46,23 @@ class RouterControl:
             response = requests.get(f"{self.base_url}/device", auth=self.auth)
             response.raise_for_status()
             devices = response.json()
+            # Update devices in data file
+            device_list = []
+            for device in devices:
+                name = device.get('name')
+                user = device.get('user', '').strip()
+                disabled = device.get('disabled', False)
+                
+                if user and user == self.config.config['rule_name']:
+                    device_list.append(f"{name}:{disabled}")
             
-            # Clear the devices file
-            with open(self.config.devices_file, 'w') as f:
-                f.write('')
-            
-            # Write matching devices to file
-            with open(self.config.devices_file, 'a') as f:
-                for device in devices:
-                    name = device.get('name')
-                    user = device.get('user', '').strip()
-                    disabled = device.get('disabled', False)
-                    
-                    if user and user == self.config.config['rule_name']:
-                        f.write(f"{name}:{disabled}\n")
-            
+            # Update devices in JSON data
+            data = self.config.get_data()
+            data['devices'] = device_list
+            self.config.data = data
+            self.config._save_data()
             return True
+            
         except Exception as e:
             logger.error(f"Error getting devices: {str(e)}")
             return False
@@ -66,9 +70,9 @@ class RouterControl:
     def update_devices_under_max(self):
         """Update the status of devices under the maximum allowed time."""
         try:
-            # Read devices from file
-            with open(self.config.devices_file, 'r') as f:
-                devices = [line.strip().split(':') for line in f if line.strip()]
+            # Read devices from JSON data
+            devices = [(device.split(':')[0], device.split(':')[1]) 
+                      for device in self.config.get_data('devices')]
             
             for device_name, device_status in devices:
                 # Get device info from router
