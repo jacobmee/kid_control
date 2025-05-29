@@ -29,7 +29,7 @@
             flex-direction: column;
             justify-content: space-between;
             height: auto; /* Reduced height */
-            max-width: 90%;
+            max-width: 380px;
         }
         h1 {
             color: #333;
@@ -140,11 +140,17 @@
     <div class="container">
         {% with messages = get_flashed_messages() %}
             {% if messages and messages|length > 0 %}
-                <ul class="flashes">
-                    {% for message in messages %}
-                        <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
+                <div style="border: 4px solid rgba(255, 0, 119, 0.805); padding: 5px; margin: 5px auto; border-radius: 4px; max-width: 80%; text-align: center; display: flex; justify-content: center;">
+                    <table>
+                        <tbody>
+                            {% for message in messages %}
+                                <tr>
+                                    <td style="color: rgba(255, 0, 119, 0.805); padding: 5px;">{{ message }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% endif %}
         {% endwith %}
         <p></p>
@@ -196,9 +202,11 @@
             {% endif %}
         </div>
         <p></p> <p></p>
-        <p class="total-spent">Time left today: <span class="highlight">{{ remaining_time }}</span>
+        <p class="total-spent">Time available today: 
             {% if network_status == 'enabled' %}
-                <span class="highlight">- {{ elapsed_time }}</span>
+                <span class="highlight">{{ remaining_time - elapsed_time }}</span>
+            {% else %}
+                <span class="highlight">{{ remaining_time }}</span>
             {% endif %} 
             mins
         </p><p></p>

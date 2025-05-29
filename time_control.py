@@ -73,13 +73,16 @@ class TimeControl:
         defined_restime = int(self.config.get_config_value('restime') or '0')
         
         stop_times = last_elapsed_time // defined_period
-        needed_rest_time = (defined_period * defined_restime * stop_times) // 100
-        
+        needed_rest_time = (defined_period * defined_restime * stop_times) // 100  
+
         if total_rest_time < needed_rest_time:
             return False, f"Not enough rest time: {total_rest_time} minutes taken, {needed_rest_time} minutes required"
-
-        self.config.set_time_record('rest_time', str(needed_rest_time))  
         
+        if total_rest_time >= needed_rest_time:
+            total_rest_time = needed_rest_time
+        
+        self.config.set_time_record('rest_time', str(total_rest_time))  
+
         return True, None
     
     def start_counting(self):
@@ -101,7 +104,8 @@ class TimeControl:
         # Update router rule
         if not self.router.update_rule_status(True):
             return False, "Failed to update router rule"
-        
+
+
         # Set start time
         self.config.set_time_record('start_time', str(int(time.time())))
         self.config.remove_time_record('stop_time')
@@ -206,7 +210,7 @@ def time_checking():
             time_control.stop_counting()
         else:
             left_minutes = max_minutes - total_minutes_used
-            logger.info(f"[RUNNING] ({left_minutes}-{elapsed_time}) mins, RESTING: ({required_rest_time}>{last_rest_time}) mins")
+            logger.info(f"[UP]: {left_minutes-elapsed_time} mins open, TO REST: R({last_rest_time})+E({elapsed_time}) => {required_rest_time} mins")
     
     if stop_time and stop_time != '0':
         elapsed_time = (current_time - int(stop_time)) // 60  # Convert seconds to minutes
@@ -217,8 +221,8 @@ def time_checking():
         total_minutes_used = int(config.get_config_value('current') or '0')
         max_minutes = int(config.get_config_value(current_day) or '0')
         remaining_minutes = max_minutes - total_minutes_used
-        
-        logger.info(f"[IDLE]: {remaining_minutes} mins available. RESTING: ({required_rest_time}-{last_rest_time}<{elapsed_time}) mins")
+
+        logger.info(f"[DOWN]: {remaining_minutes} mins remaining. RESTING: {required_rest_time} mins => R({last_rest_time})+E({elapsed_time})")
 
 if __name__ == "__main__":
     time_checking() 

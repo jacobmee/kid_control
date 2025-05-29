@@ -29,7 +29,7 @@ def setup_logger(name):
     return logger
 
 # Get logger
-logger = setup_logger('config')
+logger = setup_logger('TIME.CONTROL')
 
 class Config:
     def __init__(self):
@@ -167,7 +167,7 @@ class Config:
                 previous_day = f.read().strip()
             
             if current_day != previous_day:
-                logger.info(f"Kid_control: {current_day}: {current_usage} mins newly set")
+                #logger.info(f"Kid_control: {current_day}: {current_usage} mins newly set")
                 
                 # Reset all counters
                 self.set_config_value('current', '0')
@@ -188,6 +188,8 @@ class Config:
             new_usage = int(minutes)
             total_usage = current_usage + new_usage
             self.set_config_value('current', str(total_usage))
+            if new_usage < 0:
+                logger.info(f"+++ [NEW TIME]: {new_usage} mins +++")
         except ValueError as e:
             logger.error(f"Error updating current usage: {str(e)}")
             raise 
