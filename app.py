@@ -38,12 +38,12 @@ def read_kidcontrol_config():
     return hours
 
 def check_firewall_status():
-    status = router_control.check_firewall_status()
-    return status or "unknown"
+    router_control.check_firewall_status()  # This will update the status in the JSON file
+    return config.get_network_status()
 
 def get_devices():
     if router_control.get_devices_under_max():
-        devices = config.get_data('devices')
+        devices = config.get_devices()
         return [device.split(':') for device in devices if device.strip()]
     return []
 
@@ -217,11 +217,7 @@ def edit_hours():
             device_status = 'false' if device_name in selected_devices else 'true'
             devices.append(f'{device_name}:{device_status}')
         
-        # Get fresh data before updating
-        data = config.get_data()
-        data['devices'] = devices
-        config.data = data
-        config._save_data()
+        config.set_devices(devices)
         router_control.update_devices_under_max()
         return redirect(url_for('edit_hours'))
     

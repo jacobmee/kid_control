@@ -43,37 +43,34 @@ class Config:
         }
         
         # File paths
-        self.config_file = os.path.join(self.base_dir, 'kidcontrol.config')
-        self.data_file = os.path.join(self.base_dir, 'kid_control_data.json')
+        self.data_file = os.path.join(self.base_dir, 'data.json')
         
         # Initialize files if they don't exist
         self._initialize_files()
-        self._load_data()
     
     def _initialize_files(self):
         """Initialize configuration files if they don't exist."""
-        if not os.path.exists(self.config_file):
-            with open(self.config_file, 'w') as f:
-                f.write("period=60\n")
-                f.write("restime=75\n")
-                f.write("starting=8\n")
-                f.write("ending=22\n")
-                f.write("mon=60\n")
-                f.write("tue=60\n")
-                f.write("wed=60\n")
-                f.write("thu=60\n")
-                f.write("fri=60\n")
-                f.write("sat=90\n")
-                f.write("sun=75\n")
-                f.write("current=0\n")
-        
         if not os.path.exists(self.data_file):
             initial_data = {
                 'time_records': {},
-                'status': '',
+                'network_status': '',
                 'devices': [],
                 'current_day': datetime.now().strftime('%Y-%m-%d'),
-                'task_status': {}
+                'task_status': {},
+                'settings': {
+                    'period': 60,
+                    'restime': 75,
+                    'starting': 8,
+                    'ending': 22,
+                    'mon': 60,
+                    'tue': 60,
+                    'wed': 60,
+                    'thu': 60,
+                    'fri': 60,
+                    'sat': 90,
+                    'sun': 75,
+                    'current': 0
+                }
             }
             with open(self.data_file, 'w') as f:
                 json.dump(initial_data, f, indent=4)
@@ -83,14 +80,45 @@ class Config:
         try:
             with open(self.data_file, 'r') as f:
                 self.data = json.load(f)
+                # Migrate old status to network_status if needed
+                if 'status' in self.data:
+                    self.data['network_status'] = self.data.pop('status')
+                    self._save_data()
+                # Migrate from old config file if needed
+                if 'settings' not in self.data:
+                    self.data['settings'] = {}
+                    old_config_file = os.path.join(self.base_dir, 'kidcontrol.config')
+                    if os.path.exists(old_config_file):
+                        with open(old_config_file, 'r') as f:
+                            for line in f:
+                                if '=' in line:
+                                    key, value = line.strip().split('=')
+                                    self.data['settings'][key] = int(value)
+                        self._save_data()
+                        # Optionally remove the old config file
+                        # os.remove(old_config_file)
         except Exception as e:
             logger.error(f"Error loading data file: {str(e)}")
             self.data = {
                 'time_records': {},
-                'status': '',
+                'network_status': '',
                 'devices': [],
                 'current_day': datetime.now().strftime('%Y-%m-%d'),
-                'task_status': {}
+                'task_status': {},
+                'settings': {
+                    'period': 60,
+                    'restime': 75,
+                    'starting': 8,
+                    'ending': 22,
+                    'mon': 60,
+                    'tue': 60,
+                    'wed': 60,
+                    'thu': 60,
+                    'fri': 60,
+                    'sat': 90,
+                    'sun': 75,
+                    'current': 0
+                }
             }
     
     def get_data(self, key=None):
@@ -108,34 +136,34 @@ class Config:
         except Exception as e:
             logger.error(f"Error saving data file: {str(e)}")
     
+    def get_network_status(self):
+        """Get the current network status from data file."""
+        data = self.get_data()
+        return data.get('network_status', 'unknown')
+
+    def set_network_status(self, status):
+        """Set the current network status in data file."""
+        data = self.get_data()
+        data['network_status'] = status
+        self.data = data
+        self._save_data()
+    
     def get_config_value(self, key):
-        """Get a value from the configuration file."""
+        """Get a value from settings."""
         try:
-            with open(self.config_file, 'r') as f:
-                for line in f:
-                    if line.startswith(f"{key}="):
-                        return line.strip().split('=')[1]
-            return None
+            data = self.get_data()
+            return str(data['settings'].get(key))
         except Exception as e:
             logger.error(f"Error reading config value for {key}: {str(e)}")
             return None
     
     def set_config_value(self, key, value):
-        """Set a value in the configuration file."""
+        """Set a value in settings."""
         try:
-            with open(self.config_file, 'r') as f:
-                lines = f.readlines()
-            
-            found = False
-            with open(self.config_file, 'w') as f:
-                for line in lines:
-                    if line.startswith(f"{key}="):
-                        f.write(f"{key}={value}\n")
-                        found = True
-                    else:
-                        f.write(line)
-                if not found:
-                    f.write(f"{key}={value}\n")
+            data = self.get_data()
+            data['settings'][key] = int(value)
+            self.data = data
+            self._save_data()
         except Exception as e:
             logger.error(f"Error setting config value for {key}: {str(e)}")
     
@@ -204,4 +232,16 @@ class Config:
                 logger.info(f"+++ [NEW TIME]: {new_usage} mins +++")
         except ValueError as e:
             logger.error(f"Error updating current usage: {str(e)}")
-            raise 
+            raise
+
+    def get_devices(self):
+        """Get the list of devices from data file."""
+        data = self.get_data()
+        return data.get('devices', [])
+
+    def set_devices(self, devices):
+        """Set the list of devices in data file."""
+        data = self.get_data()
+        data['devices'] = devices
+        self.data = data
+        self._save_data() 

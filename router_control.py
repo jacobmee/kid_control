@@ -27,11 +27,8 @@ class RouterControl:
 
                     #logger.info(f"KidControl: Rule is: {network_status}, Rule is: {rule.get('disabled')}")
 
-                    # Update status in JSON data
-                    data = self.config.get_data()
-                    data['status'] = network_status
-                    self.config.data = data
-                    self.config._save_data()
+                    # Update status in config
+                    self.config.set_network_status(network_status)
                     return network_status
             
             logger.error("Rule not found in router configuration")
@@ -57,10 +54,7 @@ class RouterControl:
                     device_list.append(f"{name}:{disabled}")
             
             # Update devices in JSON data
-            data = self.config.get_data()
-            data['devices'] = device_list
-            self.config.data = data
-            self.config._save_data()
+            self.config.set_devices(device_list)
             return True
             
         except Exception as e:
@@ -72,7 +66,7 @@ class RouterControl:
         try:
             # Read devices from JSON data
             devices = [(device.split(':')[0], device.split(':')[1]) 
-                      for device in self.config.get_data('devices')]
+                      for device in self.config.get_devices()]
             
             for device_name, device_status in devices:
                 # Get device info from router
@@ -90,6 +84,10 @@ class RouterControl:
                 device_id = device_info.get('.id') or device_info.get('id')
                 if not device_id:
                     logger.error(f"Device ID not found for {device_name}")
+                    continue
+                
+                # If the device is already disabled, don't update it
+                if device_status == device_info.get('disabled'):
                     continue
                 
                 # Prepare updated device info
@@ -120,13 +118,22 @@ class RouterControl:
                 if 'paused' in device_info:
                     del device_info['paused']
 
+                #logger.info(f"Updating device: {device_name} ({device_info} ) with status: {device_status}")
+
                 # Update device on router
-                response = requests.put(
-                    f"{self.base_url}/device/{device_id}",
-                    auth=self.auth,
-                    json=device_info
-                )
-                response.raise_for_status()
+                try:
+                    response = requests.put(
+                        f"{self.base_url}/device/{device_id}",
+                        auth=self.auth,
+                        json=device_info
+                    )
+                    response.raise_for_status()
+                    logger.info(f"Successfully updated device: {device_name} => status: {device_status}")
+                except Exception as e:
+                    logger.error(f"Failed to update device {device_name}: {str(e)}")
+                    logger.error(f"Request URL: {self.base_url}/device/{device_id}")
+                    logger.error(f"Request data: {json.dumps(device_info)}")
+                    continue
                 
             return True
         except Exception as e:
