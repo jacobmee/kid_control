@@ -60,8 +60,8 @@ class Config:
                 'settings': {
                     'period': 60,
                     'restime': 75,
-                    'starting': 8,
-                    'ending': 22,
+                    'starting': '8:00',
+                    'ending': '22:00',
                     'mon': 60,
                     'tue': 60,
                     'wed': 60,
@@ -108,8 +108,8 @@ class Config:
                 'settings': {
                     'period': 60,
                     'restime': 75,
-                    'starting': 8,
-                    'ending': 22,
+                    'starting': '8:00',
+                    'ending': '22:00',
                     'mon': 60,
                     'tue': 60,
                     'wed': 60,
@@ -161,7 +161,18 @@ class Config:
         """Set a value in settings."""
         try:
             data = self.get_data()
-            data['settings'][key] = int(value)
+            if key in ['starting', 'ending']:
+                # Handle time format "hour:minutes"
+                if ':' not in str(value):
+                    # If no minutes specified, assume 0 minutes
+                    value = f"{int(value)}:00"
+                # Validate time format
+                hours, minutes = map(int, str(value).split(':'))
+                if not (0 <= hours < 24 and 0 <= minutes < 60):
+                    raise ValueError(f"Invalid time format: {value}")
+                data['settings'][key] = value
+            else:
+                data['settings'][key] = int(value)
             self.data = data
             self._save_data()
         except Exception as e:
@@ -199,7 +210,6 @@ class Config:
     
     def reset_current_usage(self):
         """Reset current usage and log the previous day's usage."""
-        current_usage = self.get_config_value('current')
         current_day = datetime.now().strftime('%Y-%m-%d')
         
         try:
@@ -207,10 +217,8 @@ class Config:
             previous_day = data['current_day']
             
             if current_day != previous_day:
-                #logger.info(f"Kid_control: {current_day}: {current_usage} mins newly set")
-                
                 # Reset all counters
-                self.set_config_value('current', '0')
+                data['settings']['current'] = 0
                 data['current_day'] = current_day
                 data['time_records'] = {
                     'elapsed_time': '0',
@@ -218,6 +226,9 @@ class Config:
                 }
                 self.data = data
                 self._save_data()
+                current_usage = self.get_config_value('current')
+                logger.info(f"Kid_control: {current_day}: {current_usage} mins newly set")
+               
         except Exception as e:
             logger.error(f"Error resetting current usage: {str(e)}")
     
@@ -229,7 +240,7 @@ class Config:
             total_usage = current_usage + new_usage
             self.set_config_value('current', str(total_usage))
             if new_usage < 0:
-                logger.info(f"+++ [NEW TIME]: {new_usage} mins +++")
+                logger.info(f"+++ [NEW TIME]: {current_usage} + ({new_usage} mins) +++")
         except ValueError as e:
             logger.error(f"Error updating current usage: {str(e)}")
             raise

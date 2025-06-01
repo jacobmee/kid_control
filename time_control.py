@@ -9,6 +9,10 @@ from router_control import RouterControl
 # Get logger
 logger = setup_logger('TIME.CONTROL')
 
+def time_to_minutes(time_str):
+    hours, minutes = map(int, time_str.split(':'))
+    return hours * 60 + minutes
+
 class TimeControl:
     def __init__(self):
         self.config = Config()
@@ -42,12 +46,20 @@ class TimeControl:
     
     def check_time_limits(self):
         """Check if current time is within allowed hours and limits."""
-        current_hour = int(datetime.now().strftime('%H'))
-        start_hour = int(self.config.get_config_value('starting') or '0')
-        end_hour = int(self.config.get_config_value('ending') or '0')
+        current_time = datetime.now().strftime('%H:%M')
         
-        if current_hour < start_hour or current_hour >= end_hour:
-            return False, f"Current time ({current_hour}:00) is outside allowed hours ({start_hour}:00 - {end_hour}:00)"
+        # Get start and end times
+        start_time = self.config.get_config_value('starting')
+        end_time = self.config.get_config_value('ending')
+        
+        # Convert all times to minutes for comparison
+        # Moved to class level as it's a utility function that could be used elsewhere
+        current_time_mins = time_to_minutes(current_time)
+        start_time_mins = time_to_minutes(start_time)
+        end_time_mins = time_to_minutes(end_time)
+        
+        if current_time_mins < start_time_mins or current_time_mins >= end_time_mins:
+            return False, f"Current time ({current_time}) is outside allowed hours ({start_time} - {end_time})"
         
         total_minutes_used = self.get_total_minutes_used()
         max_minutes = self.get_max_minutes_for_today()
@@ -165,11 +177,19 @@ def time_checking():
     last_reset_day = data['current_day']
     if last_reset_day != today:
         config.reset_current_usage()
-        logger.info(f"[NEW DAY]: Reset current usage for new day: {today}")
     
     # Get current time
     current_time = int(time.time())
-    current_hour = int(datetime.now().strftime('%H'))
+    
+    # Get start and end times
+    start_time = config.get_config_value('starting')
+    end_time = config.get_config_value('ending')
+    
+    # Convert all times to minutes for comparison
+    # Moved to class level as it's a utility function that could be used elsewhere
+    current_time_mins = time_to_minutes(datetime.now().strftime('%H:%M'))
+    start_time_mins = time_to_minutes(start_time)
+    end_time_mins = time_to_minutes(end_time)
     
     # Get configuration values
     start_time = config.get_time_record('start_time')
@@ -183,8 +203,6 @@ def time_checking():
     # Get parameters
     defined_period = int(config.get_config_value('period') or '0')
     defined_restime = int(config.get_config_value('restime') or '0')
-    stop_hour = int(config.get_config_value('ending') or '0')
-    start_hour = int(config.get_config_value('starting') or '0')
     
     # Get time records
     last_elapsed_time = int(config.get_time_record('elapsed_time') or '0')
@@ -202,16 +220,16 @@ def time_checking():
         elif required_rest_time > last_rest_time:
             logger.info(f"[FORCE STOP for resting]: {required_rest_time} > {last_rest_time}")
             time_control.stop_counting()
-        elif current_hour >= stop_hour:
-            logger.info(f"[FORCE STOP for too late]: Current Hour: {current_hour} >= Stop Hour: {stop_hour}")
+        elif current_time_mins >= end_time_mins:
+            logger.info(f"[FORCE STOP for too late]: Current Hour: {current_time_mins} >= End Hour: {end_time_mins}")
             time_control.stop_counting()
-        elif current_hour < start_hour:
-            logger.info(f"[FORCE STOP for too early]: Current Hour: {current_hour} < Start Hour: {start_hour}")
+        elif current_time_mins < start_time_mins:
+            logger.info(f"[FORCE STOP for too early]: Current Hour: {current_time_mins} < Start Hour: {start_time_mins}")
             time_control.stop_counting()
         else:
             left_minutes = max_minutes - total_minutes_used
-            logger.info(f"[UP]: {left_minutes-elapsed_time} mins open, TO REST: R({last_rest_time})+E({elapsed_time}) => {required_rest_time} mins")
-    
+            logger.info(f"[UP]: {left_minutes-elapsed_time} mins open, TO REST: R({last_rest_time})+E({elapsed_time + last_elapsed_time % defined_period})/{defined_period} ==> {required_rest_time}({defined_period * defined_restime // 100}) mins")
+            
     if stop_time and stop_time != '0':
         elapsed_time = (current_time - int(stop_time)) // 60  # Convert seconds to minutes
         stop_times = last_elapsed_time // defined_period
@@ -221,8 +239,12 @@ def time_checking():
         total_minutes_used = int(config.get_config_value('current') or '0')
         max_minutes = int(config.get_config_value(current_day) or '0')
         remaining_minutes = max_minutes - total_minutes_used
+        if required_rest_time > last_rest_time + elapsed_time:
+            logger.info(f"[DOWN]: {remaining_minutes} mins remaining. RESTING: {required_rest_time} mins <== R({last_rest_time})+E({elapsed_time})/({defined_period * defined_restime // 100})")
+        elif required_rest_time == last_rest_time + elapsed_time:
+            logger.info(f"[DOWN]: {remaining_minutes} mins remaining. READY to start counting")
 
-        logger.info(f"[DOWN]: {remaining_minutes} mins remaining. RESTING: {required_rest_time} mins => R({last_rest_time})+E({elapsed_time})")
+
 
 if __name__ == "__main__":
     time_checking() 

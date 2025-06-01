@@ -34,7 +34,11 @@ def read_kidcontrol_config():
     for key in ['period', 'restime', 'starting', 'ending', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'current']:
         value = config.get_config_value(key)
         if value:
-            hours[key] = int(value)
+            # Only convert to int if it's not a time field (starting/ending)
+            if key in ['starting', 'ending']:
+                hours[key] = value  # Keep as string for time fields
+            else:
+                hours[key] = int(value)
     return hours
 
 def check_firewall_status():
