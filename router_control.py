@@ -17,7 +17,7 @@ class RouterControl:
             response = requests.get(self.base_url, auth=self.auth)
             response.raise_for_status()
             rules = response.json()
-            
+
             for rule in rules:
                 if rule['name'] == self.config.config['rule_name']:
                     if rule.get('disabled') == 'true':
@@ -33,6 +33,9 @@ class RouterControl:
             
             logger.error("Rule not found in router configuration")
             return None
+        except requests.exceptions.Timeout:
+            logger.error("Timeout occurred while connecting to the router.")
+            return None
         except Exception as e:
             logger.error(f"Error checking KidControl status: {str(e)}")
             return None
@@ -42,7 +45,7 @@ class RouterControl:
         try:
             response = requests.get(f"{self.base_url}/device", auth=self.auth)
             response.raise_for_status()
-            devices = response.json()
+            devices = response.json() 
             # Update devices in data file
             device_list = []
             for device in devices:
@@ -56,6 +59,9 @@ class RouterControl:
             # Update devices in JSON data
             self.config.set_devices(device_list)
             return True
+        except requests.exceptions.Timeout:
+            logger.error("Timeout occurred while connecting to the router.")
+            return None
         except Exception as e:
             logger.error(f"Error getting devices: {str(e)}")
             return False
@@ -191,33 +197,59 @@ class RouterControl:
     
     def reconnect_all_devices(self):
         """Ask all devices under the rule to reconnect to WiFi by toggling their disabled status via SSH to OpenWRT. This method now runs in the background and returns immediately."""
-        import threading
-        def _reconnect_worker():
+        try:
+            # Get all devices for the current rule
+            self.get_devices_under_max()
+            # Now read the devices from the config
+            devices = self.config.get_devices()
+            
+            
+            url = f"http://{self.config.config['router_ip']}/rest/system/script/run"
+
+            # Define the JSON payload to run the script
+            payload = {
+                "number": "kidcontrol" # Or use "number": script_id
+            }
+
             try:
-                # Get all devices for the current rule
-                self.get_devices_under_max()
-                # Now read the devices from the config
-                devices = self.config.get_devices()
-                openwrt_ip = self.config.config.get('openwrt_ip')
-                openwrt_user = self.config.config.get('openwrt_user')
-                openwrt_password = self.config.config.get('password')
-                for device in devices:
-                    device_name, device_mac, device_status = device.split('|')
-                    if device_status.lower() == 'true':
-                        continue
-                    try:
-                        if device_mac:
-                            disconnect_cmd = (
-                                '/root/reconnect.sh {mac}'
-                            ).format(mac=device_mac)
-                            ssh_cmd = f"sshpass -p '{openwrt_password}' ssh {openwrt_user}@{openwrt_ip} '{disconnect_cmd}'"
-                            import subprocess
-                            result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
-                            if result.returncode == 0 and not result.stderr.strip():
-                                logger.info(f"Deauthenticated {device_name} ({device_mac})")
-                    except Exception as e:
-                        logger.error(f"Error reconnecting device {device_name} ({device_mac}): {str(e)}")
-            except Exception as e:
-                logger.error(f"Error in reconnect_all_devices: {str(e)}")
-        # Start the worker in a background thread
-        threading.Thread(target=_reconnect_worker, daemon=True).start()
+                # Send the POST request to run the script
+                response = requests.post(url, json=payload, auth=self.auth)  # Consider using certificate verification in production
+
+                # Check the response
+                if response.status_code == 200:
+                    logger.info("Update gateway script executed successfully!")
+                else:
+                    logger.error(f"Failed to execute update gateway script: {response.status_code} - {response.text}")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Error executing update gateway script: {str(e)}")
+                return False
+            
+            openwrt_ip = self.config.config.get('openwrt_ip')
+            openwrt_user = self.config.config.get('openwrt_user')
+            openwrt_password = self.config.config.get('password')
+            device_macs = []
+            for device in devices:
+                device_name, device_mac, device_status = device.split('|')
+                if device_status.lower() == 'true':
+                    continue
+                device_macs.append(device_mac)
+                logger.info(f"Deauthenticating {device_name} ({device_mac})")
+
+            if not device_macs:
+                return
+            else:
+                try:
+                    def run_disconnect():
+                        disconnect_cmd = (
+                            '/root/reconnect.sh {macs}'
+                        ).format(macs=','.join(device_macs))
+                        ssh_cmd = f"sshpass -p '{openwrt_password}' ssh {openwrt_user}@{openwrt_ip} '{disconnect_cmd}'"
+                        #logger.info(f"ssh command: {ssh_cmd}")
+                        import subprocess
+                        result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+                    import threading
+                    threading.Thread(target=run_disconnect, daemon=True).start()
+                except Exception as e:
+                    logger.error(f"Error reconnecting device {device_name} ({device_mac}): {str(e)}")
+        except Exception as e:
+            logger.error(f"Error in reconnect_all_devices: {str(e)}")
