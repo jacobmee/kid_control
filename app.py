@@ -48,7 +48,7 @@ def check_firewall_status():
 def get_devices():
     if router_control.get_devices_under_max():
         devices = config.get_devices()
-        return [device.split(':') for device in devices if device.strip()]
+        return [device.split('|') for device in devices if device.strip()]
     return []
 
 def get_time(requested_key):
@@ -176,7 +176,7 @@ def adjust_time():
 
     # Adjust time based on task
     time_adjustments = {
-        'homework': -30,
+        'homework': -15,
         'english': -15,
         'coding': -15,
         'noyelling': -15,
@@ -218,9 +218,10 @@ def edit_hours():
         devices = []
         for device in get_devices():
             device_name = device[0]
+            device_mac = device[1]
             device_status = 'false' if device_name in selected_devices else 'true'
-            devices.append(f'{device_name}:{device_status}')
-        
+            devices.append(f'{device_name}|{device_mac}|{device_status}')
+
         config.set_devices(devices)
         router_control.update_devices_under_max()
         return redirect(url_for('edit_hours'))

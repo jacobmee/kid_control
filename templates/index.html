@@ -169,7 +169,7 @@
         <div class="button-container">
             <form action="{{ url_for('adjust_time') }}" method="post">
                 <input type="hidden" name="task" value="homework">
-                <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Homework (30)</button>
+                <button type="submit" class="add-button" {% if task_status.get('homework') %}disabled{% endif %}>Homework (15)</button>
             </form>
             <!-- Add more buttons here 
             <form action="{{ url_for('adjust_time') }}" method="post">
@@ -191,7 +191,7 @@
                 <input type="hidden" name="task" value="washes">
                 <button type="submit" class="add-button" {% if task_status.get('washes') %}disabled{% endif %}>Clean yourself (15)</button>
             </form>
-            {% if current_day in ['saturday', 'sunday'] %}
+            {% if current_day in ['1saturday', '1sunday'] %}
             <form action="{{ url_for('adjust_time') }}" method="post">
                 <input type="hidden" name="task" value="outdoor">
                 <button type="submit" class="add-button" 

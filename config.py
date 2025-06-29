@@ -36,6 +36,8 @@ class Config:
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.config = {
             'router_ip': '192.168.0.1',
+            'openwrt_ip': '192.168.0.11',
+            'openwrt_user': 'root',
             'username': 'jacob',
             'password': 'Jac0bm!@#G',
             'rule_name': 'max',
@@ -58,10 +60,10 @@ class Config:
                 'current_day': datetime.now().strftime('%Y-%m-%d'),
                 'task_status': {},
                 'settings': {
-                    'period': 60,
-                    'restime': 75,
+                    'period': 75,
+                    'restime': 80,
                     'starting': '8:00',
-                    'ending': '22:00',
+                    'ending': '22:30',
                     'mon': 60,
                     'tue': 60,
                     'wed': 60,

@@ -198,7 +198,7 @@
                     <tr>
                         <td>{{ device[0] }}</td>
                         <td>
-                            <input type="checkbox" name="devices" value="{{ device[0] }}" {% if device[1] != 'true' %}checked{% endif %}>
+                            <input type="checkbox" name="devices" value="{{ device[0] }}" {% if device[2] != 'true' %}checked{% endif %}>
                         </td>
                     </tr>
                     {% endfor %}

@@ -38,7 +38,7 @@ class RouterControl:
             return None
     
     def get_devices_under_max(self):
-        """Get all devices under the maximum allowed time."""
+        """Get all devices under the maximum allowed time, including name and mac address."""
         try:
             response = requests.get(f"{self.base_url}/device", auth=self.auth)
             response.raise_for_status()
@@ -47,16 +47,15 @@ class RouterControl:
             device_list = []
             for device in devices:
                 name = device.get('name')
+                mac = device.get('mac-address', '')
                 user = device.get('user', '').strip()
                 disabled = device.get('disabled', False)
-                
                 if user and user == self.config.config['rule_name']:
-                    device_list.append(f"{name}:{disabled}")
-            
+                    # Use '|' as a separator to avoid conflicts with ':' in mac addresses
+                    device_list.append(f"{name}|{mac}|{disabled}")
             # Update devices in JSON data
             self.config.set_devices(device_list)
             return True
-            
         except Exception as e:
             logger.error(f"Error getting devices: {str(e)}")
             return False
@@ -65,7 +64,7 @@ class RouterControl:
         """Update the status of devices under the maximum allowed time."""
         try:
             # Read devices from JSON data
-            devices = [(device.split(':')[0], device.split(':')[1]) 
+            devices = [(device.split('|')[0], device.split('|')[2]) 
                       for device in self.config.get_devices()]
             
             for device_name, device_status in devices:
@@ -182,7 +181,43 @@ class RouterControl:
 
             response.raise_for_status()
             
+            # After updating, we should get all the devices and try to ask them to reconnect wifi
+            self.reconnect_all_devices()
+
             return True
         except Exception as e:
             logger.error(f"Error updating rule status: {str(e)}")
-            return False 
+            return False
+    
+    def reconnect_all_devices(self):
+        """Ask all devices under the rule to reconnect to WiFi by toggling their disabled status via SSH to OpenWRT. This method now runs in the background and returns immediately."""
+        import threading
+        def _reconnect_worker():
+            try:
+                # Get all devices for the current rule
+                self.get_devices_under_max()
+                # Now read the devices from the config
+                devices = self.config.get_devices()
+                openwrt_ip = self.config.config.get('openwrt_ip')
+                openwrt_user = self.config.config.get('openwrt_user')
+                openwrt_password = self.config.config.get('password')
+                for device in devices:
+                    device_name, device_mac, device_status = device.split('|')
+                    if device_status.lower() == 'true':
+                        continue
+                    try:
+                        if device_mac:
+                            disconnect_cmd = (
+                                '/root/reconnect.sh {mac}'
+                            ).format(mac=device_mac)
+                            ssh_cmd = f"sshpass -p '{openwrt_password}' ssh {openwrt_user}@{openwrt_ip} '{disconnect_cmd}'"
+                            import subprocess
+                            result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+                            if result.returncode == 0 and not result.stderr.strip():
+                                logger.info(f"Deauthenticated {device_name} ({device_mac})")
+                    except Exception as e:
+                        logger.error(f"Error reconnecting device {device_name} ({device_mac}): {str(e)}")
+            except Exception as e:
+                logger.error(f"Error in reconnect_all_devices: {str(e)}")
+        # Start the worker in a background thread
+        threading.Thread(target=_reconnect_worker, daemon=True).start()

@@ -9,6 +9,9 @@ python3 -m venv "$SCRIPT_DIR/venv"
 # Activate it
 source "$SCRIPT_DIR/venv/bin/activate"
 
+# Install requirements
+#pip install -r "$SCRIPT_DIR/requirements.txt"
+
 # Set the working directory to the script's location
 cd "$SCRIPT_DIR"
 
