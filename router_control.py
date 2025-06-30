@@ -217,7 +217,7 @@ class RouterControl:
 
                 # Check the response
                 if response.status_code == 200:
-                    logger.info("Update gateway script executed successfully!")
+                    logger.info("Gateway script updated")
                 else:
                     logger.error(f"Failed to execute update gateway script: {response.status_code} - {response.text}")
             except requests.exceptions.RequestException as e:
@@ -233,7 +233,6 @@ class RouterControl:
                 if device_status.lower() == 'true':
                     continue
                 device_macs.append(device_mac)
-                logger.info(f"Deauthenticating {device_name} ({device_mac})")
 
             if not device_macs:
                 return
@@ -247,6 +246,18 @@ class RouterControl:
                         #logger.info(f"ssh command: {ssh_cmd}")
                         import subprocess
                         result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+                        # Parse result.stdout to find which MACs were actually processed
+                        # Build a mapping from MAC to device name for accurate logging
+                        mac_to_name = {d.split('|')[1]: d.split('|')[0] for d in devices}
+                        processed_macs = set()
+                        for line in result.stdout.splitlines():
+                            for mac in device_macs:
+                                if mac.lower() in line.lower():
+                                    processed_macs.add(mac)
+                        if processed_macs:
+                            logger.info(f"Deauthenticated: {[(mac_to_name[mac], mac) for mac in processed_macs]}")
+                        else:
+                            logger.info("No deauthenticated devices")
                     import threading
                     threading.Thread(target=run_disconnect, daemon=True).start()
                 except Exception as e:
