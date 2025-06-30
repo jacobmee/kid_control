@@ -5,6 +5,7 @@ import time
 import json
 import sys
 from datetime import date, datetime, timedelta
+import threading
 
 from config import Config, setup_logger
 from time_control import TimeControl
@@ -246,6 +247,17 @@ def check_password_status():
         if datetime.now().timestamp() - validated_time < 7200:  # 2 hours in seconds
             return "valid"
     return "invalid"
+
+def periodic_time_check():
+    while True:
+        try:
+            time_control.time_checking()
+        except Exception as e:
+            logger.error(f"Error in periodic time_checking: {str(e)}")
+        time.sleep(60)
+
+# Start the periodic thread when the app starts
+threading.Thread(target=periodic_time_check, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

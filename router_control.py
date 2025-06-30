@@ -203,7 +203,6 @@ class RouterControl:
             # Now read the devices from the config
             devices = self.config.get_devices()
             
-            
             url = f"http://{self.config.config['router_ip']}/rest/system/script/run"
 
             # Define the JSON payload to run the script
@@ -216,9 +215,7 @@ class RouterControl:
                 response = requests.post(url, json=payload, auth=self.auth)  # Consider using certificate verification in production
 
                 # Check the response
-                if response.status_code == 200:
-                    logger.info("Gateway script updated")
-                else:
+                if response.status_code != 200:
                     logger.error(f"Failed to execute update gateway script: {response.status_code} - {response.text}")
             except requests.exceptions.RequestException as e:
                 logger.error(f"Error executing update gateway script: {str(e)}")
@@ -255,9 +252,9 @@ class RouterControl:
                                 if mac.lower() in line.lower():
                                     processed_macs.add(mac)
                         if processed_macs:
-                            logger.info(f"Deauthenticated: {[(mac_to_name[mac], mac) for mac in processed_macs]}")
+                            logger.info(f"DHCP renewing: {[(mac_to_name[mac], mac) for mac in processed_macs]}")
                         else:
-                            logger.info("No deauthenticated devices")
+                            logger.info("No renewed devices")
                     import threading
                     threading.Thread(target=run_disconnect, daemon=True).start()
                 except Exception as e:
