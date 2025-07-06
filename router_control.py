@@ -133,7 +133,7 @@ class RouterControl:
                         json=device_info
                     )
                     response.raise_for_status()
-                    logger.info(f"Successfully updated device: {device_name} => status: {device_status}")
+                    logger.info(f"Updated device: {device_name}'s status => {device_status}")
                 except Exception as e:
                     logger.error(f"Failed to update device {device_name}: {str(e)}")
                     logger.error(f"Request URL: {self.base_url}/device/{device_id}")
@@ -201,7 +201,7 @@ class RouterControl:
             # Get all devices for the current rule
             self.get_devices_under_max()
             # Now read the devices from the config
-            devices = self.config.get_devices()
+            devices = self.config.get_devices()           
             
             url = f"http://{self.config.config['router_ip']}/rest/system/script/run"
 
@@ -252,12 +252,14 @@ class RouterControl:
                                 if mac.lower() in line.lower():
                                     processed_macs.add(mac)
                         if processed_macs:
-                            logger.info(f"DHCP renewing: {[(mac_to_name[mac], mac) for mac in processed_macs]}")
+                            formatted = ', '.join(f"{mac_to_name[mac]}({mac})" for mac in processed_macs)
+                            logger.info(f"Leasing: {formatted}")
                         else:
-                            logger.info("No renewed devices")
+                            logger.info("No leased devices")
                     import threading
                     threading.Thread(target=run_disconnect, daemon=True).start()
                 except Exception as e:
                     logger.error(f"Error reconnecting device {device_name} ({device_mac}): {str(e)}")
         except Exception as e:
             logger.error(f"Error in reconnect_all_devices: {str(e)}")
+
