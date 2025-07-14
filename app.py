@@ -260,4 +260,4 @@ def periodic_time_check():
 threading.Thread(target=periodic_time_check, daemon=True).start()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=False, host='0.0.0.0')

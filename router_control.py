@@ -253,9 +253,9 @@ class RouterControl:
                                     processed_macs.add(mac)
                         if processed_macs:
                             formatted = ', '.join(f"{mac_to_name[mac]}({mac})" for mac in processed_macs)
-                            logger.info(f"Leasing: {formatted}")
+                            logger.info(f"Notifying devices: {formatted}")
                         else:
-                            logger.info("No leased devices")
+                            logger.info("No notified devices")
                     import threading
                     threading.Thread(target=run_disconnect, daemon=True).start()
                 except Exception as e:
