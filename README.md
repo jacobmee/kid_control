@@ -2,7 +2,7 @@
 
 A Python/Flask-based home network and time management system for device and rule control, with OpenWRT integration and a modern web UI.
 
-![](app/static/kid_control.png)
+![](src/static/kid_control.png)
 
 ## Features
 
