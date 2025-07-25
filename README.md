@@ -2,7 +2,7 @@
 
 A Python/Flask-based home network and time management system for device and rule control, with OpenWRT integration and a modern web UI.
 
-![](static/kid_control.png)
+![](app/static/kid_control.png)
 
 ## Features
 
@@ -17,17 +17,16 @@ A Python/Flask-based home network and time management system for device and rule
 ## Requirements
 
 - Python 3.7+
-- Flask
 - OpenWRT router (for device control)
 - SSH access to router
-- See `requirements.txt` for Python dependencies
+- All Python dependencies are managed in `pyproject.toml`
 
 ## Setup
 
 1. Clone this repository.
-2. Install dependencies:
+2. Install dependencies using [uv](https://github.com/astral-sh/uv) (fast Python package manager):
    ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 3. Configure your router and device info in `config.py` and `data.json`.
 4. Place your SVG favicon in `static/mitang.svg`.
@@ -35,7 +34,7 @@ A Python/Flask-based home network and time management system for device and rule
 ## Running
 
 ```bash
-python app.py
+uv run app.py
 ```
 
 - The web UI will be available at `http://<your-server>:5000/`

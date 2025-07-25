@@ -1,0 +1,16 @@
+[project]
+name = "kid_control"
+version = "0.1.0"
+description = "A Python/Flask-based home network and time management system for device and rule control, with OpenWRT integration and a modern web UI."
+authors = [
+    { name = "Jacob.Mi", email = "jacobmee@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "Flask",
+    "requests"
+]
+
+[tool.setuptools]
+packages = ["."]
