@@ -64,10 +64,10 @@ def get_elapsed_time():
     elapsed_time = (current_time - start_time) // 60  # Convert seconds to minutes
     return elapsed_time
 
-def get_total_elapsed_time():
+def get_saved_elapsed_time():
     return get_time('elapsed_time')
 
-def get_total_rest_time():
+def get_saved_rest_time():
     return get_time('rest_time')
 
 @app.route('/')
@@ -101,7 +101,7 @@ def index():
         }
 
         # Update with actual values
-        total_minutes_used = hours.pop('current', 0)
+        saved_minutes_used = hours.pop('current', 0)
         defined_period = hours.pop('period', 0)
         defined_restime = hours.pop('restime', 0)
         hours.pop('starting', 0)
@@ -110,36 +110,45 @@ def index():
         # Get the maximum minutes allowed for today
         max_minutes = hours.get(time.strftime('%a').lower(), 0)
         
-        elapsed_time = get_elapsed_time()
-        remaining_time = max_minutes - total_minutes_used
-        
+        unsaved_elapsed_time = get_elapsed_time()
+        remaining_time = max_minutes - saved_minutes_used
+       
         # Map abbreviated weekday names to full names
         full_weekday_names = {day[:3].lower(): day for day in calendar.day_name}
         hours = {full_weekday_names.get(day, day): minutes for day, minutes in hours.items()}
         
-        total_elapsed_time = get_total_elapsed_time()
-        total_rest_time = get_total_rest_time()
+        saved_used_time = get_saved_elapsed_time()
+        saved_rest_time = get_saved_rest_time()
 
         # Calculate the needed rest time
-        stop_times = int(total_elapsed_time / defined_period) if defined_period > 0 else 0
-        required_rest_time = int(stop_times * defined_restime * defined_period / 100) if defined_period > 0 else 0
-        needed_rest_time = int(required_rest_time - total_rest_time - elapsed_time)
+        # Usually stop when time is up, so the start time should be based on how many time we have rested
+        # the rest time is two data: saved elsapsed time and unsaved elapsed time
+        # when user is in resting, the start to start to meaningful
+        time_to_start = 0
+        time_to_stop = 0
 
-        next_rest_time = int(total_elapsed_time + elapsed_time) if network_status == 'enabled' else int(total_elapsed_time)
-        next_rest_time = next_rest_time % defined_period if defined_period > 0 else 0
-        if next_rest_time > 0:
-            next_rest_time = defined_period - next_rest_time
+        if network_status == 'disabled':
+            stop_times = int(saved_used_time / defined_period) if defined_period > 0 else 0
+            required_rest_time = int(stop_times * defined_restime * defined_period / 100) if defined_period > 0 else 0
+            this_time_required_rest_time = required_rest_time - saved_rest_time
+            time_to_start = this_time_required_rest_time - unsaved_elapsed_time
+            #logger.info(f"KID.CONTROL time_to_start: {time_to_start} minutes, U({saved_used_time})/R({saved_rest_time}) => R({this_time_required_rest_time}) - E({unsaved_elapsed_time})")
+        else:
+            required_rest_time = int(defined_restime * defined_period / 100) if defined_period > 0 else 0
+            time_to_rest = required_rest_time - unsaved_elapsed_time
+            time_to_stop = min(remaining_time, time_to_rest)
+            #logger.info(f"KID.CONTROL time_to_stop: {time_to_stop} minutes, remaining_time: {remaining_time}, time_to_rest: {time_to_rest}")
 
         # Update template variables
         template_vars.update({
             'hours': hours,
-            'total_minutes_used': total_minutes_used,
+            'total_minutes_used': saved_minutes_used,
             'network_status': network_status,
-            'elapsed_time': elapsed_time,
+            'elapsed_time': unsaved_elapsed_time,
             'remaining_time': remaining_time,
             'task_status': today_status,
-            'needed_rest_time': needed_rest_time,
-            'next_rest_time': next_rest_time
+            'needed_rest_time': time_to_start, ## after start button
+            'next_rest_time': time_to_stop ## after stop button
         })
         
         try:
@@ -260,4 +269,4 @@ def periodic_time_check():
 threading.Thread(target=periodic_time_check, daemon=True).start()
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0')

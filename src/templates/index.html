@@ -213,7 +213,7 @@
         </p><p></p>
         <div class="button-container">
             <form action="{{ url_for('startcount') }}" method="post">
-                <button type="submit" class="start-button" {% if network_status == 'enabled' or needed_rest_time > 0 %}disabled{% endif %}>Start counting {% if needed_rest_time > 0 %}({{ needed_rest_time }}){% endif %}</button>
+                <button type="submit" class="start-button" {% if network_status == 'enabled' or needed_rest_time > 0 or remaining_time == 0 %}disabled{% endif %}>Start counting {% if needed_rest_time > 0 %}({{ needed_rest_time }}){% endif %}</button>
             </form>
             <form action="{{ url_for('stopcount') }}" method="post">
                 <button type="submit" class="stop-button" {% if network_status == 'disabled' %}disabled{% endif %}>Stop counting {% if next_rest_time > 0 %}({{ next_rest_time }}){% endif %}</button>

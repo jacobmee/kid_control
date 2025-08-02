@@ -117,13 +117,37 @@ class TimeControl:
         if not self.router.update_rule_status(True):
             return False, "Failed to update router rule"
 
+        # --- Rest time logic: record rest_time at start, but cap it at required rest time or proportional max ---
+        saved_used_time = int(self.config.get_time_record('elapsed_time') or '0')
+        saved_rest_time = int(self.config.get_time_record('rest_time') or '0')
+        defined_period = int(self.config.get_config_value('period') or '0')
+        defined_restime = int(self.config.get_config_value('restime') or '0')
+        stop_times = int(saved_used_time / defined_period) if defined_period > 0 else 0
+        required_rest_time = int(stop_times * defined_restime * defined_period / 100) if defined_period > 0 else 0
+        this_time_required_rest_time = required_rest_time - saved_rest_time
+        max_rest_time = int(saved_used_time * defined_restime / 100) if defined_period > 0 else 0
+        stop_time = self.config.get_time_record('stop_time')
+
+        if stop_time and stop_time != '0':
+            current_time = int(time.time())
+            rest_time = (current_time - int(stop_time)) // 60  # minutes
+            add_rest = 0
+            if this_time_required_rest_time > 0:
+                add_rest = min(rest_time, this_time_required_rest_time)
+            elif saved_used_time > 0:
+                # Allow adding rest time, but cap total at max_rest_time
+                add_rest = min(rest_time, max(0, max_rest_time - saved_rest_time))
+            # else: add_rest remains 0
+            logger.info(f"[REST] Adding {add_rest} mins to rest time, saved: {saved_rest_time}, required: {required_rest_time}, max: {max_rest_time}")
+            self.config.set_time_record('rest_time', str(saved_rest_time + add_rest))
+
+        # Get required rest time, and saved rest time and unsave_elapsed time
+        left_minutes = self.get_max_minutes_for_today() - self.get_total_minutes_used()
+        logger.info(f"+++ [START] counting - {left_minutes} mins remaining +++")
 
         # Set start time
         self.config.set_time_record('start_time', str(int(time.time())))
         self.config.remove_time_record('stop_time')
-
-        left_minutes = self.get_max_minutes_for_today() - self.get_total_minutes_used()
-        logger.info(f"+++ [START] counting - {left_minutes} mins remaining +++")
 
         return True, "Started counting time"
     
@@ -206,7 +230,7 @@ class TimeControl:
         
         if start_time and start_time != '0':
             elapsed_time = (current_time - int(start_time)) // 60  # Convert seconds to minutes
-            stop_times = (last_elapsed_time + elapsed_time) // defined_period
+            stop_times = elapsed_time // defined_period
             required_rest_time = (defined_period * defined_restime * stop_times) // 100
             
             # Check various conditions for stopping

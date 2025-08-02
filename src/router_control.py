@@ -239,13 +239,16 @@ class RouterControl:
                         disconnect_cmd = (
                             '/root/reconnect.sh {macs}'
                         ).format(macs=','.join(device_macs))
-                        ssh_cmd = f"sshpass -p '{openwrt_password}' ssh {openwrt_user}@{openwrt_ip} '{disconnect_cmd}'"
+                        
+                        ssh_cmd = f"sshpass -p '{openwrt_password}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {openwrt_user}@{openwrt_ip} '{disconnect_cmd}'"
                         #logger.info(f"ssh command: {ssh_cmd}")
                         import subprocess
                         result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
                         # Parse result.stdout to find which MACs were actually processed
                         # Build a mapping from MAC to device name for accurate logging
                         mac_to_name = {d.split('|')[1]: d.split('|')[0] for d in devices}
+
+                        #logger.info(f"Processed result: {result}")
                         processed_macs = set()
                         for line in result.stdout.splitlines():
                             for mac in device_macs:
