@@ -132,12 +132,12 @@ def index():
             required_rest_time = int(stop_times * defined_restime * defined_period / 100) if defined_period > 0 else 0
             this_time_required_rest_time = required_rest_time - saved_rest_time
             time_to_start = this_time_required_rest_time - unsaved_elapsed_time
-            #logger.info(f"KID.CONTROL time_to_start: {time_to_start} minutes, U({saved_used_time})/R({saved_rest_time}) => R({this_time_required_rest_time}) - E({unsaved_elapsed_time})")
+            logger.info(f"Time.Start: {time_to_start} mins, S.Used({saved_used_time})/S.Rest({saved_rest_time}) => Need.Rest({this_time_required_rest_time}) - U.Rest({unsaved_elapsed_time})")
         else:
             required_rest_time = int(defined_restime * defined_period / 100) if defined_period > 0 else 0
             time_to_rest = required_rest_time - unsaved_elapsed_time
             time_to_stop = min(remaining_time, time_to_rest)
-            #logger.info(f"KID.CONTROL time_to_stop: {time_to_stop} minutes, remaining_time: {remaining_time}, time_to_rest: {time_to_rest}")
+            logger.info(f"Time.Stop: Remaining {remaining_time} or Need.Rest: {time_to_rest}, R({required_rest_time}) - U.Used({unsaved_elapsed_time})")
 
         # Update template variables
         template_vars.update({
@@ -175,10 +175,29 @@ def adjust_time():
         flash(f"You have already completed '{task}' today.")
         return redirect(url_for('index'))
 
+
     # Mark the task as completed for today
     if today not in task_status:
         task_status[today] = {}
-    task_status[today][task] = True
+    if task == "coding":
+        coding_link = request.form.get("coding_link", "").strip()
+        if coding_link:
+            # Save coding link to a separate file
+            coding_links_path = os.path.join(os.path.dirname(__file__), "coding_links.json")
+            try:
+                if os.path.exists(coding_links_path):
+                    with open(coding_links_path, "r", encoding="utf-8") as f:
+                        coding_links = json.load(f)
+                else:
+                    coding_links = {}
+            except Exception:
+                coding_links = {}
+            coding_links[today] = coding_link
+            with open(coding_links_path, "w", encoding="utf-8") as f:
+                json.dump(coding_links, f, ensure_ascii=False, indent=2)
+        task_status[today][task] = True
+    else:
+        task_status[today][task] = True
 
     # Save the updated task status
     config.data['task_status'] = task_status
@@ -223,22 +242,10 @@ def edit_hours():
         for day, minutes in hours.items():
             config.set_config_value(day, minutes)
 
-        # Save devices information
-        selected_devices = request.form.getlist('devices')
-        devices = []
-        for device in get_devices():
-            device_name = device[0]
-            device_mac = device[1]
-            device_status = 'false' if device_name in selected_devices else 'true'
-            devices.append(f'{device_name}|{device_mac}|{device_status}')
-
-        config.set_devices(devices)
-        router_control.update_devices_under_max()
         return redirect(url_for('edit_hours'))
     
-    devices = get_devices()
     hours = read_kidcontrol_config()
-    return render_template('edit.html', hours=hours, devices=devices)
+    return render_template('edit.html', hours=hours)
 
 @app.route('/validate_password', methods=['POST'])
 def validate_password():

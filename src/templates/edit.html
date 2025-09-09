@@ -185,27 +185,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-
-            <!-- Devices Table -->
-            <table>
-                <thead>
-                    <tr>
-                        <th>Device</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for device in devices %}
-                    <tr>
-                        <td>{{ device[0] }}</td>
-                        <td>
-                            <input type="checkbox" name="devices" value="{{ device[0] }}" {% if device[2] != 'true' %}checked{% endif %}>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
             <!-- Save Button -->
             <div class="button-container">
                 <button type="submit">Save</button>

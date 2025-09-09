@@ -27,8 +27,8 @@ class TimeControl:
                 stderr=subprocess.PIPE
             )
             if result.returncode != 0:
-                logger.info("[NETWORK] failed. Restarting networking service.")
-                subprocess.run(['systemctl', 'restart', 'networking'])
+                logger.info("[Network Failure] Restarting networking service.")
+                subprocess.run(['bash', '/home/jacob/bin/check_network.sh'])
                 return False
             return True
         except Exception as e:
@@ -167,8 +167,8 @@ class TimeControl:
             elapsed_time = (current_time - int(start_time)) // 60  # Convert to minutes
  
             # Update elapsed time
-            last_elapsed_time = int(self.config.get_time_record('elapsed_time') or '0')
-            total_elapsed_time = last_elapsed_time + elapsed_time
+            used_time = int(self.config.get_time_record('elapsed_time') or '0')
+            total_elapsed_time = used_time + elapsed_time
             self.config.set_time_record('elapsed_time', str(total_elapsed_time))
             
             # Update current usage
@@ -248,7 +248,7 @@ class TimeControl:
                 self.stop_counting()
             else:
                 left_minutes = max_minutes - total_minutes_used
-                logger.info(f"[UP]: {left_minutes-elapsed_time} mins open, TO REST: R({last_rest_time})+E({elapsed_time + last_elapsed_time % defined_period})/{defined_period} ==> {required_rest_time}({defined_period * defined_restime // 100}) mins")
+                logger.info(f"[UP]: {left_minutes-elapsed_time} mins open, S.Rest({last_rest_time}): S.Used({last_elapsed_time }) + U.Used({elapsed_time}) of ({defined_period * defined_restime // 100})")
                 
         if stop_time and stop_time != '0':
             elapsed_time = (current_time - int(stop_time)) // 60  # Convert seconds to minutes
@@ -260,7 +260,7 @@ class TimeControl:
             max_minutes = int(self.config.get_config_value(current_day) or '0')
             remaining_minutes = max_minutes - total_minutes_used
             if required_rest_time > last_rest_time + elapsed_time:
-                logger.info(f"[DOWN]: {remaining_minutes} mins remaining. RESTING: {required_rest_time} mins <== R({last_rest_time})+E({elapsed_time})/({defined_period * defined_restime // 100})")
+                logger.info(f"[DOWN]: {remaining_minutes} mins remaining. Waiting: {required_rest_time} mins <== S.Rest({last_rest_time}) + U.Rest({elapsed_time}) of ({defined_period * defined_restime // 100})")
             elif required_rest_time == last_rest_time + elapsed_time:
                 logger.info(f"[DOWN]: {remaining_minutes} mins remaining. READY to start counting")
 

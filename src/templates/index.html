@@ -136,6 +136,52 @@
             }
         }
     </style>
+    <script>
+    // Coding button modal logic
+        document.addEventListener('DOMContentLoaded', function() {
+            var codingBtn = document.getElementById('coding-btn');
+            var codingModal = document.getElementById('coding-modal');
+            var codingModalSubmit = document.getElementById('coding-modal-submit');
+            var codingModalCancel = document.getElementById('coding-modal-cancel');
+            var codingLinkField = document.getElementById('coding-link-field');
+            var codingForm = document.getElementById('coding-form');
+            var codingLinkInput = document.getElementById('coding-link-input');
+            if (codingBtn) {
+                codingBtn.addEventListener('click', function(e) {
+                    codingModal.style.display = 'flex';
+                    codingLinkField.value = '';
+                    codingLinkField.focus();
+                });
+            }
+            if (codingModalCancel) {
+                codingModalCancel.addEventListener('click', function() {
+                    codingModal.style.display = 'none';
+                });
+            }
+            if (codingModalSubmit) {
+                codingModalSubmit.addEventListener('click', function() {
+                    var val = codingLinkField.value.trim();
+                    if (!val) {
+                        alert('Please enter a link to the code.');
+                        codingLinkField.focus();
+                        return;
+                    }
+                    codingLinkInput.value = val;
+                    codingModal.style.display = 'none';
+                    codingForm.submit();
+                });
+            }
+            // Allow Enter key to submit
+            if (codingLinkField) {
+                codingLinkField.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        codingModalSubmit.click();
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -178,10 +224,21 @@
                 <button type="submit" class="add-button" {% if task_status.get('english') %}disabled{% endif %}>照顾翠花 (15)</button>
             </form>
             -->
-            <form action="{{ url_for('adjust_time') }}" method="post">
+            <form id="coding-form" action="{{ url_for('adjust_time') }}" method="post">
                 <input type="hidden" name="task" value="coding">
-                <button type="submit" class="add-button" {% if task_status.get('coding') %}disabled{% endif %}>Coding (15)</button>
+                <input type="hidden" name="coding_link" id="coding-link-input">
+                <button type="button" class="add-button" id="coding-btn" {% if task_status.get('coding') %}disabled{% endif %}>Coding (15)</button>
             </form>
+            <!-- Modal for coding link -->
+            <div id="coding-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center;">
+                <div style="background:#fff; padding:20px; border-radius:8px; min-width:300px; text-align:center; box-shadow:0 0 10px #0002;">
+                    <h3>Links to the code</h3>
+                    <input type="text" id="coding-link-field" placeholder="Paste your code link here" style="width:90%; padding:8px; margin-bottom:10px;">
+                    <br>
+                    <button type="button" id="coding-modal-submit" style="margin-right:10px;">Submit</button>
+                    <button type="button" id="coding-modal-cancel">Cancel</button>
+                </div>
+            </div>
         </div>
         <div class="button-container">
             <form action="{{ url_for('adjust_time') }}" method="post">

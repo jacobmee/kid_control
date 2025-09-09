@@ -35,8 +35,7 @@ class Config:
     def __init__(self):
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.config = {
-            'router_ip': '192.168.0.1',
-            'openwrt_ip': '192.168.0.11',
+            'openwrt_ip': '192.168.0.1',
             'openwrt_user': 'root',
             'username': 'jacob',
             'password': 'Jac0bm!@#G',
@@ -64,13 +63,13 @@ class Config:
                     'restime': 80,
                     'starting': '8:00',
                     'ending': '22:30',
-                    'mon': 60,
-                    'tue': 60,
-                    'wed': 60,
-                    'thu': 60,
+                    'mon': 30,
+                    'tue': 30,
+                    'wed': 30,
+                    'thu': 30,
                     'fri': 60,
-                    'sat': 90,
-                    'sun': 75,
+                    'sat': 60,
+                    'sun': 60,
                     'current': 0
                 }
             }
