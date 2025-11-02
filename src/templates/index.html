@@ -227,9 +227,8 @@
             <form id="coding-form" action="{{ url_for('adjust_time') }}" method="post">
                 <input type="hidden" name="task" value="coding">
                 <input type="hidden" name="coding_link" id="coding-link-input">
-                <!--<button type="button" class="add-button" id="coding-btn" {% if task_status.get('coding') %}disabled{% endif %}>Go Coding (60)</button>-->
-                <button type="button" class="add-button" id="coding-btn">Go Coding (60)</button>
-            </form>
+                <button type="button" class="add-button" id="coding-btn" {% if task_status.get('coding') %}disabled{% endif %}>Go Coding (60)</button>
+                </form>
             <!-- Modal for coding link -->
             <div id="coding-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center;">
                 <div style="background:#fff; padding:20px; border-radius:8px; min-width:300px; text-align:center; box-shadow:0 0 10px #0002;">

@@ -171,9 +171,9 @@ def adjust_time():
     task_status = config.get_data('task_status')
 
     # Check if the task has already been completed today
-    #if task_status.get(today, {}).get(task):
-    #    flash(f"You have already completed '{task}' today.")
-    #    return redirect(url_for('index'))
+    if task_status.get(today, {}).get(task):
+        flash(f"You have already completed '{task}' today.")
+        return redirect(url_for('index'))
 
 
     # Mark the task as completed for today
